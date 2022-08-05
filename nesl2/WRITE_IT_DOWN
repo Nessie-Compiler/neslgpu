@@ -1,0 +1,21 @@
+Given the binding
+
+	v = __vector(s, dv)
+
+if v has type [t], then dv has type S{{t}}, with the mapping S{{.}} defined as follows:
+
+S{{ b    }}      => [:b:]                   (vectors of base type)
+S{{ [t'] }}      => [t']                    (don't recursively handle nested vectors)
+S{{ ( t1, t2) }} => (S{{ t1 }}, S{{ t2 }})  (do recursively handle tuples)
+
+and, related mapping from surface-level to flan types, T{{.}}
+
+T{{ b }}        => b
+T{{ (t1, t2) }} => ( T{{ t1 }}, T{{ t2 }} )
+T{{ [t] }}      => F{{ [t] }} )
+
+and the flattening of sequence types F{{.}}
+
+F{{ b }}        => [: b :]
+F{{ (t1, t2) }} => ( F{{ t1 }}, F{{ t2 }} )
+F{{ [t] }}      => ( segdes, F{{ t }} )

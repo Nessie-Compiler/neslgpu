@@ -1,0 +1,11 @@
+Status of benchmark programs [2012-10-18]
+
+Main.doFile "../examples/simple.vcode";				(* OK *)
+Main.doFile "../examples/fact.vcode";				(* OK *)
+Main.doFile "../../bench/NESL/batcher.1000000.vcode";		(* OK *)
+Main.doFile "../../bench/NESL/bh.50000.vcode";		        (* OK *)
+Main.doFile "../../bench/NESL/delaunay.10000.vcode";		(* OK *)
+Main.doFile "../../bench/NESL/dotp.5000000.vcode";		(* OK *)
+Main.doFile "../../bench/NESL/muladd-res.vcode";		(* OK *)
+Main.doFile "../../bench/NESL/qs.1000000.vcode";        	(* OK *)
+Main.doFile "../../bench/NESL/quickhull.5000000.vcode";		(* OK *)

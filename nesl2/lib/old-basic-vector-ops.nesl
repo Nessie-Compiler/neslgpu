@@ -1,0 +1,98 @@
+% basic-vector-ops.nesl
+=
+= This file contains the definitions of the basic Nesl operations on vectors. It was generated from
+= "vector-ops.lnesl" in the Nesl distribution and then hand edited to patch various issues.
+%
+
+% length %
+function prim_seg_lengths (segdes) : segdes -> int =
+  __prim "SEQ_TO_SCALAR INT" (__prim "LENGTHS" (segdes)) $
+function length (v) : [alpha] -> int :: (alpha in any) =
+  let __vector(segdes, values) = v;
+  in
+    prim_seg_lengths(segdes) $
+function `#` (v) : [alpha] -> int :: (alpha in any) =
+  let __vector(segdes, values) = v;
+  in
+    prim_seg_lengths(segdes) $
+
+% scan operations %
+__prim function plus_scan (a) : [alpha] -> [alpha] :: (alpha in number) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "+_SCAN INT" (v, segdes))
+    | float: let __vector(segdes, v) = a; in __vector(segdes, __prim "+_SCAN FLOAT" (v, segdes)) $
+__prim function max_scan (a) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "MAX_SCAN INT" (v, segdes))
+    | float: let __vector(segdes, v) = a; in __vector(segdes, __prim "MAX_SCAN FLOAT" (v, segdes))
+    | char: let __vector(segdes, v) = a; in __vector(segdes, __prim "MAX_SCAN INT" (v, segdes)) $
+__prim function min_scan (a) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "MIN_SCAN INT" (v, segdes))
+    | float: let __vector(segdes, v) = a; in __vector(segdes, __prim "MIN_SCAN FLOAT" (v, segdes))
+    | char: let __vector(segdes, v) = a; in __vector(segdes, __prim "MIN_SCAN INT" (v, segdes)) $
+__prim function mult_scan (a) : [alpha] -> [alpha] :: (alpha in number) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "*_SCAN INT" (v, segdes))
+    | float: let __vector(segdes, v) = a; in __vector(segdes, __prim "*_SCAN FLOAT" (v, segdes)) $
+__prim function or_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "OR_SCAN INT" (v, segdes))
+    | bool: let __vector(segdes, v) = a; in __vector(segdes, __prim "OR_SCAN BOOL" (v, segdes)) $
+__prim function and_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "AND_SCAN INT" (v, segdes))
+    | bool: let __vector(segdes, v) = a; in __vector(segdes, __prim "AND_SCAN BOOL" (v, segdes)) $
+__prim function xor_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, v) = a; in __vector(segdes, __prim "XOR_SCAN INT" (v, segdes))
+    | bool: let __vector(segdes, v) = a; in __vector(segdes, __prim "XOR_SCAN BOOL" (v, segdes)) $
+
+% reduction operations %
+__prim function sum (v) : [alpha] -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "+_REDUCE INT" (u, segdes))
+    | float: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR FLOAT" (__prim "+_REDUCE FLOAT" (u, segdes)) $
+__prim function product (v) : [alpha] -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "*_REDUCE INT" (u, segdes))
+    | float: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR FLOAT" (__prim "*_REDUCE FLOAT" (u, segdes)) $
+__prim function max_val (v) : [alpha] -> alpha :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "MAX_REDUCE INT" (u, segdes))
+    | float: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR FLOAT" (__prim "MAX_REDUCE FLOAT" (u, segdes))
+    | char: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR CHAR" (__prim "MAX_REDUCE CHAR" (u, segdes)) $
+__prim function min_val (v) : [alpha] -> alpha :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "MIN_REDUCE INT" (u, segdes))
+    | float: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR FLOAT" (__prim "MIN_REDUCE FLOAT" (u, segdes))
+    | char: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR CHAR" (__prim "MIN_REDUCE CHAR" (u, segdes)) $
+__prim function any (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "OR_REDUCE INT" (u, segdes))
+    | bool: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR BOOL" (__prim "OR_REDUCE BOOL" (u, segdes)) $
+__prim function all (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "AND_REDUCE INT" (u, segdes))
+    | bool: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR BOOL" (__prim "AND_REDUCE BOOL" (u, segdes)) $
+__prim function parity (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR INT" (__prim "XOR_REDUCE INT" (u, segdes))
+    | bool: let __vector(segdes, u) = v; in __prim "SEQ_TO_SCALAR BOOL" (__prim "XOR_REDUCE BOOL" (u, segdes)) $
+
+% zip/unzip %
+function zip (a, b) : ([A], [B]) -> [(A, B)] :: (A in any; B in any) =
+  { (a, b) : a; b} $
+function zip3 (a, b, c) : ([A], [B], [C]) -> [(A, (B, C))] :: (A in any; B in any; C in any) =
+  { (a, (b, c)) : a; b; c} $
+function unzip (a) =
+  ({a1 : (a1, _) in a}, {a2 : (_, a2) in a}) $
+% primitive zip is the real workhorse %
+__prim function prim_zip (a, b) : ([A], [B]) -> [(A, B)] :: (A in any; B in any) =
+  __poly_typecase A
+    | let __vector(seg, _) = a; in __vector(seg, (a, b))
+    | let __vector(sega, _) = a;
+	% the segdes of the zipped sequence is going to be [len], where len is the number of subsegments in a %
+	  seg = __prim "MAKE_SEGDES" (__prim "SCALAR_TO_SEQ INT" (__prim "LENGTH INT" (__prim "LENGTHS" (sega))))
+      in
+	__vector(seg, (a, b)) $

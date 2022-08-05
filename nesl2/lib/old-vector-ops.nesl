@@ -1,0 +1,435 @@
+% vector-ops.nesl
+=
+= This file was generated from "vector-ops.lnesl" in the Nesl distribution and then
+= hand edited to patch various issues.
+%
+
+%-- Nesl functions from "vector-ops.lnesl" --%
+function prim_int_to_seq (i) : int -> [:int:] = __prim "SCALAR_TO_SEQ INT" (i) $
+
+__prim function prim_scalar_to_seq (s) : alpha -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "SCALAR_TO_SEQ INT" (s)
+    | float: __prim "SCALAR_TO_SEQ FLOAT" (s)
+    | char: __prim "SCALAR_TO_SEQ CHAR" (s)
+    | bool: __prim "SCALAR_TO_SEQ BOOL" (s) $
+
+__prim function prim_length (v) : [:alpha:] -> int :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "LENGTH INT" (v)
+    | float: __prim "LENGTH FLOAT" (v)
+    | char: __prim "LENGTH CHAR" (v)
+    | bool: __prim "LENGTH BOOL" (v) $
+
+function make_segdes (i) : int -> segdes =
+  __prim "MAKE_SEGDES" (prim_int_to_seq (i)) $
+
+function lifted_segdes (vs) : [[alpha]] -> [segdes] :: (alpha in any) =
+  {make_segdes (length (v)) : v in vs} $
+
+function prim_plus_reduce (v) : ([:int:], segdes) -> int =
+  __prim "SEQ_TO_SCALAR INT" (__prim "+_REDUCE INT" (v)) $
+
+function prim_iseq (init, stride, segdes) : (int, int, segdes) -> [:int:] =
+  __prim "INDEX" (prim_int_to_seq (init), prim_int_to_seq (stride), segdes) $
+
+function index_l (__vector(seg, val)) : [alpha] -> [int] :: (alpha in any) =
+  __vector(seg, prim_iseq(0, 1, seg)) $
+
+function index (l) : int -> [int] =
+  let seg = make_segdes(l);
+  in
+    __vector(seg, prim_iseq(0, 1, seg)) $
+
+function iseq_l (s, d, vec) =
+  let __vector(seg, val) = vec;
+  in
+    __vector(seg, prim_iseq(s, d, seg)) $
+
+function iseq1 (s, e) =
+  let seg = make_segdes(e - s);
+  in
+    __vector(seg, prim_iseq(s, 1, seg)) $
+
+function iseqm1 (s, e) =
+  let seg = make_segdes(s - e);
+  in
+    __vector(seg, prim_iseq(s, -1, seg)) $
+
+function iseq (s, d, e) : (int, int, int) -> [int] =
+  let len = (((e - s) - 1) + d) / d;
+      seg = make_segdes(len);
+  in
+    __vector(seg, prim_iseq(s, d, seg)) $
+
+__prim function prim_rep_scalar (D, I, V, S) : ([:alpha:], [:int:], [:alpha:], segdes) -> alpha :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "REPLACE INT" (D, I, V, S)
+    | float: __prim "REPLACE FLOAT" (D, I, V, S)
+    | char: __prim "REPLACE CHAR" (D, I, V, S)
+    | bool: __prim "REPLACE BOOL" (D, I, V, S) $
+
+function positions_from_offsets (offsets, vals) : ([int], [[alpha]]) -> [int] :: (alpha in any) =
+  flatten({iseq_l(o, 1, v) : o in offsets; v in vals}) $
+
+__prim function prim_extract (V, I, S) : ([:alpha:], [:int:], segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "EXTRACT INT" (V, I, S)
+    | float: __prim "EXTRACT FLOAT" (V, I, S)
+    | char: __prim "EXTRACT CHAR" (V, I, S)
+    | bool: __prim "EXTRACT BOOL" (V, I, S) $
+
+__prim function prim_elt (V, I, S) : ([:alpha:], [:int:], segdes) -> alpha :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "SEQ_TO_SCALAR INT" (__prim "EXTRACT INT" (V, I, S))
+    | float: __prim "SEQ_TO_SCALAR FLOAT" (__prim "EXTRACT FLOAT" (V, I, S))
+    | char: __prim "SEQ_TO_SCALAR CHAR" (__prim "EXTRACT CHAR" (V, I, S))
+    | bool:__prim "SEQ_TO_SCALAR BOOL" ( __prim "EXTRACT BOOL" (V, I, S)) $
+
+__prim function prim_get_scalar (v, i, ss, ds) : ([:alpha:], [:int:], segdes, segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "BPERMUTE INT" (v, i, ss, ds)
+    | float: __prim "BPERMUTE FLOAT" (v, i, ss, ds)
+    | char: __prim "BPERMUTE CHAR" (v, i, ss, ds)
+    | bool: __prim "BPERMUTE BOOL" (v, i, ss, ds) $
+
+__prim function get_nocheck (values, indices) : ([alpha], [int]) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | let __vector(seg, vals) = values;
+        __vector(segi, valsi) = indices;
+    in
+      __vector(segi, prim_get_scalar(vals, valsi, seg, segi))
+    | let alengths = {length(values) : values};
+	  aoffsets = plus_scan(alengths);
+	  lengths = get_nocheck(alengths, indices);
+	  offsets = flatten({iseq1(off, len + off) : off in get_nocheck(aoffsets, indices); len in lengths});
+      in
+	partition(get_nocheck(flatten(values), offsets), lengths) $
+
+function `->` (values, indices) =
+  get_nocheck(values, indices) $
+
+function read (values, indices) =
+  values -> indices $
+
+__prim function elt_nocheck (a, i) : ([alpha], int) -> alpha :: (alpha in any) =
+  __poly_typecase alpha
+    | let __vector(seg, val) = a;
+    in
+      prim_elt(val, prim_int_to_seq (i), seg)
+    | let seg_lengths = {length(a) : a};
+	  offset = elt_nocheck(plus_scan(seg_lengths), i);
+          length = elt_nocheck(seg_lengths, i);
+    in
+      get_nocheck(flatten(a), iseq1(offset, offset + length)) $
+
+function elt (a, i) =
+  elt_nocheck(a, i) $
+
+__prim function prim_dist_scalar (a, segdes) : (alpha, segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "DIST INT" (prim_scalar_to_seq(a), segdes)
+    | float: __prim "DIST FLOAT" (prim_scalar_to_seq(a), segdes)
+    | char: __prim "DIST CHAR" (prim_scalar_to_seq(a), segdes)
+    | bool: __prim "DIST BOOL" (prim_scalar_to_seq(a), segdes) $
+
+__prim function prim_dist_flat (a, l) : ([:alpha:], int) -> [alpha] :: (alpha in any) =
+  __base_typecase alpha
+    | int: let seg = make_segdes(l);
+      	   in
+	     __vector(seg, __prim "DIST INT" (a, seg))
+    | float: let seg = make_segdes(l);    
+      	     in  
+	       __vector(seg, __prim "DIST FLOAT" (a, seg))
+    | char: let seg = make_segdes(l);	  
+             in
+               __vector(seg, __prim "DIST CHAR" (a, seg))
+    | bool: let seg = make_segdes(l);	  
+             in
+               __vector(seg, __prim "DIST BOOL" (a, seg)) $
+
+function transpose_index (len, seg, segs2) : (int, segdes, segdes) -> [:int:] =
+  let ind = prim_iseq(0, 1, seg);
+      llen = prim_dist_scalar(len, seg);
+  in
+    __prim "INDEX" (ind, llen, segs2) $
+
+__prim function prim_permute_scalar (v, i, vs) : ([:alpha:], [:int:], segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "PERMUTE INT" (v, i, vs)
+    | float: __prim "PERMUTE FLOAT" (v, i, vs)
+    | char: __prim "PERMUTE CHAR" (v, i, vs)
+    | bool: __prim "PERMUTE BOOL" (v, i, vs) $
+
+__prim function permute_nocheck (v, i) : ([alpha], [int]) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | let __vector(seg, v) = v;
+          __vector(iseg, ivals) = i;
+      in
+        __vector(seg, prim_permute_scalar(v, ivals, seg))
+    | let lengths = permute_nocheck({ length(v) : v }, i);
+	  offset = plus_scan(lengths);
+	  positions = positions_from_offsets(get_nocheck(offset, i), v);
+      in
+	partition(permute_nocheck(flatten(v), positions), lengths) $
+
+function permute (v, i) =
+  permute_nocheck(v, i) $
+
+__prim function prim_get_scalar (v, i, ss, ds) : ([:alpha:], [:int:], segdes, segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "BPERMUTE INT" (v, i, ss, ds)
+    | float: __prim "BPERMUTE FLOAT" (v, i, ss, ds)
+    | char: __prim "BPERMUTE CHAR" (v, i, ss, ds)
+    | bool: __prim "BPERMUTE BOOL" (v, i, ss, ds) $
+
+__prim function prim_dist (a, segdes) : (alpha, segdes) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | __vector(segdes, prim_dist_scalar(a, segdes))
+    | let i = prim_seg_lengths(segdes);
+        __vector(sega, vala) = a;
+        l = prim_seg_lengths(sega);
+        __vector(ignore, (segs2, vals)) = {let seg = make_segdes(i);
+          in
+            (seg, prim_dist(v, seg)) : v in a};
+        idx = transpose_index(l, sega, segs2);
+        seg = make_segdes(i * l);
+        __vector(seg, vals) = permute_nocheck(__vector(seg, vals), __vector(seg, idx));
+        newseg = __prim "MAKE_SEGDES" (prim_dist_scalar(l, segdes));
+    in
+      __vector(newseg, vals) $
+
+function dist (a, l) : (alpha, int) -> [alpha] :: (alpha in any) =
+  let segdes = make_segdes(l);
+  in
+    prim_dist(a, segdes) $
+%--    __vector(segdes, prim_dist(a, segdes)) $ --%
+
+function seq_dist (a, l) : (alpha, int) -> [alpha] :: (alpha in any) =
+  let segdes = make_segdes(l);
+  in
+    prim_dist(a, segdes) $
+%--    __vector(segdes, prim_dist(a, segdes)) $ --%
+
+function dist_l (v, w) : (alpha, [beta]) -> [alpha] :: (alpha in any; beta in any) =
+  let __vector(w_segdes, junk) = w;
+  in
+    prim_dist(v, w_segdes) $
+%--    __vector(w_segdes, prim_dist(v, w_segdes)) $ --%
+
+function plus_dist (v) : [alpha] -> [alpha] :: (alpha in number) =
+  dist_l(sum(v), v) $
+
+function max_dist (v) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  dist_l(max_val(v), v) $
+
+function min_dist (v) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  dist_l(min_val(v), v) $
+
+% Given a sequence of ordinals, max_index
+  returns the index of the maximum value.  If several values
+  are equal, it returns the leftmost index.
+%
+function max_index (v) : [alpha] -> int :: (alpha in ordinal) =
+  let l = length(v);
+      mx = max_val(v);
+  in
+    min_val({ select_scalar(v = mx, i, l) : v; i in index(l) }) $
+
+function min_index (v) : [alpha] -> int :: (alpha in ordinal) =
+  let l = length(v);
+      mn = min_val(v);
+  in
+    min_val({ select_scalar(v = mn, i, l) : v; i in index(l) }) $
+
+__prim function old_pack_scalar (v, flags) : ([alpha], [bool]) -> [alpha] :: (alpha in any) =
+  __base_typecase alpha
+    | int: let __vector(segdes, val) = v; __vector(_, flgs) = flags; in __vector(__prim "PACK INT" (val, flgs, segdes))
+    | float: let __vector(segdes, val) = v; __vector(_, flgs) = flags; in __vector(__prim "PACK FLOAT" (val, flgs, segdes))
+    | char: let __vector(segdes, val) = v; __vector(_, flgs) = flags; in __vector(__prim "PACK CHAR" (val, flgs, segdes))
+    | bool: let __vector(segdes, val) = v; __vector(_, flgs) = flags; in __vector(__prim "PACK BOOL" (val, flgs, segdes))
+$
+
+__prim function old_pack (v, flags) : ([alpha], [bool]) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | old_pack_scalar(v, flags)
+    | partition(old_pack(flatten(v), flatten({ dist_l(flags, v) : flags; v })), old_pack({ length(v) : v }, flags))
+    | let __vector(seg, (a, b)) = v;
+        __vector(seg1, val1) = old_pack(__vector(seg, a), flags);
+        __vector(seg2, val2) = old_pack(__vector(seg, b), flags);
+    in
+      __vector(seg1, (val1, val2)) $
+
+__prim function pack_scalar (v) : [(alpha, bool)] -> [alpha] :: (alpha in any) =
+  __base_typecase alpha
+    | int: let __vector(segdes, (val, flags)) = v in __vector(__prim "PACK INT" (val, flags, segdes))
+    | float: let __vector(segdes, (val, flags)) = v in __vector(__prim "PACK FLOAT" (val, flags, segdes))
+    | char: let __vector(segdes, (val, flags)) = v in __vector(__prim "PACK CHAR" (val, flags, segdes))
+    | bool: let __vector(segdes, (val, flags)) = v in __vector(__prim "PACK BOOL" (val, flags, segdes))
+$
+
+__prim function pack (v) : [(alpha, bool)] -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | pack_scalar(v)
+    | partition(
+	pack(flatten({ { (val, flag) : val } : (val, flag) in v })),
+	pack({ (length(val), flag) : (val, flag) in v }))
+    | let __vector(seg, ((a, b), flag)) = v;
+        __vector(seg1, val1) = pack(__vector(seg, (a, flag)));
+        __vector(seg2, val2) = pack(__vector(seg, (b, flag)));
+    in
+      __vector(seg1, (val1, val2)) $
+
+function pack_index (flags) : [bool] -> [int] =
+  old_pack(index_l(flags), flags) $
+
+__prim function prim_put_scalar (v, i, d, vs, ds) : ([:alpha:], [:int:], [:alpha:], segdes, segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "DPERMUTE INT" (v, i, d, vs, ds)
+    | float: __prim "DPERMUTE FLOAT" (v, i, d, vs, ds)
+    | char: __prim "DPERMUTE CHAR" (v, i, d, vs, ds)
+    | bool: __prim "DPERMUTE BOOL" (v, i, d, vs, ds) $
+
+function put_scalar (v, i, d) : ([alpha], [int], [alpha]) -> [alpha] :: (alpha in any) =
+  let __vector(vs, vdata) = v;
+      __vector(is, idata) = i;
+      __vector(ds, ddata) = d;
+  in
+    __vector(ds, prim_put_scalar(vdata, idata, ddata, vs, ds)) $
+
+% inlined into put to avoid mutual recursion
+function segput (vals, i, def) : ([[alpha]], [int], [[alpha]]) -> [[alpha]] :: (alpha in any) =
+  let idx = index_l(i);
+      tmp = put(idx, i, dist_l(-1, def));
+      dflag = { tmp < 0 : tmp };
+      flg = { idx1 == idx2 : idx1 in idx; idx2 in get_nocheck(tmp, i) };
+      pair(newvals, newi) = if not(all(flg))
+        then pair(old_pack(vals, flg), old_pack(i, flg))
+        else pair(vals, i);
+      lengths = put({ length(newvals) : newvals }, newi, { length(def) : def });
+      offset = plus_scan(lengths);
+      spos = positions_from_offsets(get_nocheck(offset, newi), newvals);
+      dvals = old_pack(def, dflag);
+      dpos = positions_from_offsets(old_pack(offset, dflag), dvals);
+  in
+    partition(join(flatten(newvals), spos, flatten(dvals), dpos), lengths) $
+%
+
+__prim function len_put_scalar (v, i, l) : ([alpha], [int], int) -> [alpha] :: (alpha in any) =
+  __base_typecase alpha
+    | int: put_scalar(v, i, dist(0, l))
+    | float: put_scalar(v, i, dist(0.000000, l))
+    | bool: put_scalar(v, i, dist(f, l))
+    | char: put_scalar(v, i, dist(space, l))
+%
+    | function: let __vector(seg, val) = v;
+    in
+      __vector(make_segdes(l), val) $
+%
+$
+
+% inline in join to avoid mutual recursion
+function segjoin (v1, p1, v2, p2) : ([[alpha]], [int], [[alpha]], [int]) -> [[alpha]] :: (alpha in any) =
+  let l1 = { length(v) : v in v1 };
+      l2 = { length(v) : v in v2 };
+      ll = join(l1, p1, l2, p2);
+      offsets = plus_scan(ll);
+      pos1 = positions_from_offsets(get_nocheck(offsets, p1), v1);
+      pos2 = positions_from_offsets(get_nocheck(offsets, p2), v2);
+  in
+    partition(join(flatten(v1), pos1, flatten(v2), pos2), ll) $
+%
+
+__prim function join (v1, p1, v2, p2) : ([alpha], [int], [alpha], [int]) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | put_scalar(v1, p1, len_put_scalar(v2, p2, length(v1) + length(v2)))
+    | let l1 = { length(v) : v in v1 };
+	  l2 = { length(v) : v in v2 };
+	  ll = join(l1, p1, l2, p2);
+	  offsets = plus_scan(ll);
+	  pos1 = positions_from_offsets(get_nocheck(offsets, p1), v1);
+	  pos2 = positions_from_offsets(get_nocheck(offsets, p2), v2);
+      in
+	partition(join(flatten(v1), pos1, flatten(v2), pos2), ll) $
+
+function `++` (v1, v2) : ([alpha], [alpha]) -> [alpha] :: (alpha in any) =
+  join(v1, iseq_l(0, 1, v1), v2, iseq_l(length(v1), 1, v2)) $
+
+function cons (a, v) : (alpha, [alpha]) -> [alpha] :: (alpha in any) =
+  dist(a, 1) ++ v $
+
+function snoc (v, a) : ([alpha], alpha) -> [alpha] :: (alpha in any) =
+  v ++ dist(a, 1) $
+
+function make_sequence (v, a) =
+  v ++ dist(a, 1) $
+
+function flag_merge (flags, v1, v2) : ([bool], [alpha], [alpha]) -> [alpha] :: (alpha in any) =
+  let i = index_l(flags);
+  in
+    join(v2, old_pack(i, flags), v1, old_pack(i, { not(flags) : flags })) $
+
+__prim function put (v, i, d) : ([alpha], [int], [alpha]) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | put_scalar(v, i, d)
+    | let idx = index_l(i);
+	  tmp = put(idx, i, dist_l(-1, d));
+	  dflag = { tmp < 0 : tmp };
+	  flg = { idx1 == idx2 : idx1 in idx; idx2 in get_nocheck(tmp, i) };
+	  (newvals, newi) = if not(all(flg))
+	    then (old_pack(v, flg), old_pack(i, flg))
+	    else (v, i);
+	  lengths = put({ length(newvals) : newvals }, newi, { length(d) : d });
+	  offset = plus_scan(lengths);
+	  spos = positions_from_offsets(get_nocheck(offset, newi), newvals);
+	  dvals = old_pack(d, dflag);
+	  dpos = positions_from_offsets(old_pack(offset, dflag), dvals);
+      in
+	partition(join(flatten(newvals), spos, flatten(dvals), dpos), lengths) $
+
+function `<-` (d, ivpairs) =
+  let bindex = {b1 : (b1, b2) in ivpairs};
+      bvals = {b2 : (b1, b2) in ivpairs};
+  in
+    put(bvals, bindex, d) $
+
+function write (d, ivpairs) =
+  d <- ivpairs $
+
+function const_put (v, i, d) : (alpha, [int], [alpha]) -> [alpha] :: (alpha in any) =
+  put(dist_l(v, i), i, d) $
+
+__prim function prim_fpermute (v, i, flags, sseg, dseg) : ([:alpha:], [:int:], [:bool:], segdes, segdes) -> [:alpha:] :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "FPERMUTE INT" (v, i, flags, sseg, dseg)
+    | float: __prim "FPERMUTE FLOAT" (v, i, flags, sseg, dseg)
+    | char: __prim "FPERMUTE CHAR" (v, i, flags, sseg, dseg)
+    | bool: __prim "FPERMUTE BOOL" (v, i, flags, sseg, dseg) $
+
+function fpermute_hack (v, i, flags, dest) =
+  let __vector(vseg, vval) = v;
+      __vector(iseg, ival) = i;
+      __vector(fseg, fval) = flags;
+      __vector(dseg, dval) = dest;
+  in
+    __vector(dseg, prim_fpermute(vval, ival, fval, vseg, dseg)) $
+
+function seglenput (a, i, l) : ([[alpha]], [int], int) -> [[alpha]] :: (alpha in any) =
+  let lengths = put({ length(a) : a }, i, dist(0, l));
+      offset = plus_scan(lengths);
+      positions = positions_from_offsets(get_nocheck(offset, i), a);
+  in
+    partition(permute_nocheck(flatten(a), positions), lengths) $
+
+__prim function len_put (a, i, l) : ([alpha], [int], int) -> [alpha] :: (alpha in any) =
+  __poly_typecase alpha
+    | len_put_scalar(a, i, l)
+    | seglenput(a, i, l) $
+
+function unpack (v, flags) : ([alpha], [bool]) -> [alpha] :: (alpha in any) =
+  len_put(v, pack_index(flags), length(flags)) $
+
+function reverse (a) : [alpha] -> [alpha] :: (alpha in any) =
+  permute_nocheck(a, iseq_l(length(a) - 1, -1, a)) $
+
+%-- end "vector-ops.lnesl" --%

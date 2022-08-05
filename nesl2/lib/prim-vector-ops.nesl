@@ -1,0 +1,99 @@
+% prim-vector-ops.nesl
+=
+= These functions are the primitive vector operations that are used in the flattening
+= transformation.
+%
+
+% length %
+
+__prim function prim_length (v) : [alpha] -> int :: (alpha in any) =
+  __base_typecase alpha
+    | int: __prim "LENGTH INT" (v)
+    | float: __prim "LENGTH FLOAT" (v)
+    | char: __prim "LENGTH CHAR" (v)
+    | bool: __prim "LENGTH BOOL" (v) $
+
+
+function prim_seg_lengths (segdes) : segdes -> int =
+  __prim "SEQ_TO_SCALAR INT" (__prim "LENGTHS" (segdes)) $
+
+
+function zip (a, b) : ([A], [B]) -> [(A, B)] :: (A in any; B in any) =
+  let __vector(aseg, aval) = a;
+      __vector(bseg, bval) = b;
+  in
+    __vector(aseg, (aval, bval)) $
+
+function unzip(v) : [(A, B)] -> ([A], [B]) :: (A in any; B in any) =
+  let __vector(seg, (avals, bvals)) = v;
+  in
+    (__vector(seg, avals), __vector(seg, bvals)) $
+
+
+__prim function length (v) : [alpha] -> int :: (alpha in any) =
+  __poly_typecase alpha	
+    | prim_length(v)
+    | let __vector(segdes, values) = v;
+      in
+        prim_seg_lengths(segdes) 
+    | let (v1, v2) = unzip(v);
+      in
+        length(v1) $
+
+function `#` (v) : [alpha] -> int :: (alpha in any) =
+  length (v) $
+
+function length_lifted (v) : [[alpha]] -> [int] :: (alpha in any) =
+  let __vector(seg1, __vector(segdes, values)) = v;
+  in
+    __vector(seg1, __prim "LENGTHS" (segdes)) $
+
+function partition (v, counts) : ([alpha], [int]) -> [[alpha]] :: (alpha in any) =
+  let __vector(vseg, vdata) = v;
+      __vector(cseg, cdata) = counts;
+  in
+    __vector(cseg, __vector(__prim "MAKE_SEGDES" (cdata), vdata)) $
+
+function partition_lifted (pairs) : [([alpha], [int])] -> [[[alpha]]] :: (alpha in any) =
+  let (v, counts) = unzip(pairs);
+      __vector(vseg1, __vector(vseg2, vdata)) = v;
+      __vector(cseg1, __vector(cseg2, cdata)) = counts;
+  in
+     __vector(cseg1, __vector(cseg2, __vector(__prim "MAKE_SEGDES" (cdata), vdata))) $
+
+function flatten (v) : [[alpha]] -> [alpha] :: (alpha in any) =
+  let __vector(vseg, __vector(nvseg, vdata)) = v;
+      counts = __vector(vseg, __prim "LENGTHS" (nvseg));
+      newlen = __prim "SCALAR_TO_SEQ INT" (__prim "+_REDUCE INT" (counts));
+  in
+    __vector(__prim "MAKE_SEGDES" (newlen), vdata) $
+
+function flatten_lifted (v) : [[[alpha]]] -> [[alpha]] :: (alpha in any) =
+  let __vector(vseg1, __vector(vseg2, __vector(vseg3, vdata))) = v;
+      counts = __vector(vseg1, __vector(vseg2, __prim "LENGTHS" (vseg3)));
+      __vector(_, newlens) = {__prim "+_REDUCE INT" (count) : count in counts};
+      newseg = __prim "MAKE_SEGDES" (newlens);
+  in
+    __vector(vseg1, __vector(newseg, vdata)) $
+
+function zip_lifted (v) : [([A], [B])] -> [[(A, B)]] :: (A in any; B in any) =
+  let (as, bs) = unzip(v);
+      __vector(seg1, __vector(seg2, vala)) = as;
+      __vector(_, __vector(_, valb)) = bs;
+  in    
+    __vector(seg1, __vector(seg2, (vala, valb))) $
+%
+  let (as, bs) = unzip(v);
+       __vector(seg1, __vector(seg2, _)) = as;
+       counts = __vector(seg1, __prim "LENGTHS" (seg2));
+       as_f = flatten(as);
+       bs_f = flatten(bs);
+       zipped = zip(as_f, bs_f);
+  in
+    partition(zipped, counts) $
+%
+
+function unzip_lifted (v) : [[(A, B)]] -> [([A], [B])] :: (A in any; B in any) =
+  let __vector(seg1, __vector(seg2, (a, b))) = v;
+  in
+    __vector(seg1, (__vector(seg2, a), __vector(seg2, b))) $

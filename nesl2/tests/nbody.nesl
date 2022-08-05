@@ -1,0 +1,49 @@
+
+function unzip3(xyz) = 
+	 let (x, yz) = unzip(xyz);
+	     (y, z) = unzip(yz);
+	 in (x,y,z) $
+
+function sum3(xyz) =
+	let (x,y,z) = unzip3(xyz);
+	in (sum(x), sum(y), sum(z)) $
+
+
+function minus3(x,y) =
+	   let (x0,x1,x2) = x;
+	       (y0,y1,y2) = y;
+	   in (x0-y0,x1-y1,x2-y2) $
+
+
+function plus3(x,y) =
+	   let (x0,x1,x2) = x;
+	       (y0,y1,y2) = y;
+	   in (x0+y0,x1+y1,x2+y2) $
+
+
+function scale3(x,c) =
+	   let (x0,x1,x2) = x;
+	   in (x0*c,x1*c,x2*c) $
+
+function force(x,y) = 
+	   let (r0,r1,r2) = minus3(y,x);
+	       d = 1.0 / sqrt(r0*r0 + r1*r1 + r2*r2 + 0.0000001);
+	   in (r0*d, r1*d, r2*d) $
+
+function nbody(X,V) = 
+	 let A = {sum3({force(x,y) : x in X}) : y in X};
+	     X1 = { plus3(x, plus3(v, scale3(a, 0.5))) : x in X; v in V; a in A};
+	     V1 = { plus3(v, a) : v in V; a in A};
+	 in (X1, V1) $
+
+
+function mainloop(X,V,k) = if k == 0 then (X,V) else let (X1, V1) = nbody(X,V) in mainloop(X1, V1, k-1) $
+
+function nbody_main(N, runs) = 
+	 let X = { (sin(float(x)), cos(float(x)), tan(float(x))) : x in [0:N]};
+             V = { (cos(float(x)), tan(float(x)), sin(float(x))) : x in [0:N]};
+             z = nbody(X, V);
+	     ((X1,V1), y) = time(mainloop(X, V,runs));
+	 in (N, y / float(runs) * 1000.0, elt(X1, 0)) $
+
+nbody_main(100, 2) $

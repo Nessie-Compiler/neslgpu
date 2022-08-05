@@ -1,0 +1,16 @@
+Library
+
+  structure LNesl
+  structure Gen
+
+is
+
+  $/basis.cm
+  $/smlnj-lib.cm
+  $/pp-lib.cm
+  /Users/jhr/Work/smlnj/sml/smlnj-lib/SExp/sexp-lib.cm (* should be $/sexp-lib.cm in 110.77 *)
+
+  gen.sml
+  lnesl.sml
+  vcode.sml
+

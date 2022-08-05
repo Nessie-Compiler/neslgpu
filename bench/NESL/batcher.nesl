@@ -1,0 +1,22 @@
+function bitonic_sort(a) =
+if (#a == 1) then a
+else
+    let
+	bot = subseq(a,0,#a/2);
+	top = subseq(a,#a/2,#a);
+	mins = {min(bot,top):bot;top};
+	maxs = {max(bot,top):bot;top};
+    in flatten({bitonic_sort(x) : x in [mins,maxs]});
+
+function batcher_sort(a) =
+if (#a == 1) then a
+else
+    let
+      b = {batcher_sort(x) : x in bottop(a)};
+   in bitonic_sort(b[0]++reverse(b[1]));
+
+function run_batcher(n) =
+let nums = {rand(i): i in dist(100, n)} ;
+    (results,tm) = time(batcher_sort(nums));
+in (results[0], tm) $
+

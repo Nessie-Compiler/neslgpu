@@ -1,0 +1,861 @@
+(* prim.sml
+ *
+ * COPYRIGHT (c) 2013 Nora Sandler (nlsandler@cs.uchicago.edu)
+ * All rights reserved.
+ *
+ * NESL primitives.
+ *)
+
+structure Prim : sig
+
+   datatype code 
+    (*** B1. Scalar Operations ***)
+    (* Logic operations *)
+     = OR
+     | NOR
+     | XOR
+     | AND
+     | NAND
+     | NOT
+     (* Predicate operations *)
+     | PLUSP
+     | MINUSP
+     | ZEROP
+     | ODDP
+     | EVENP
+     (* Comparison operations *)
+     | EQ
+     | NEQ
+     | LT
+     | GT
+     | LTE
+     | GTE
+     (* Arithmetic operations *)
+     | PLUS
+     | MINUS
+     | TIMES
+     | DIV
+     | POW
+     | NEG
+     | ABS
+     | DIFF
+     | MAX
+     | MIN
+     | REM
+     | LSHIFT
+     | RSHIFT
+     | SQRT
+     | ISQRT
+     | LN
+     | LOG
+     | EXP
+     | EXPT
+     | SIN
+     | COS
+     | TAN
+     | ASIN
+     | ACOS
+     | ATAN
+     | SINH
+     | COSH
+     | TANH
+     (* Conversion operations *)
+     | BTOI
+     | CODE_CHAR
+     | CHAR_CODE
+     | FLOAT
+     | CEIL
+     | FLOOR
+     | TRUNC
+     | ROUND
+     (* Rand operations *)
+     | RAND
+     | RAND_SEED
+     (* Constants *)
+     | PI
+     | MAX_INT
+     | MIN_INT
+     (*** B.2 Sequence Functions ***)
+     (* Simple sequence functions *)
+     | LENGTH
+     | DIST
+     | ELT
+     | REP
+     | ZIP
+     | UNZIP
+     (* Scans and reduces *)
+     | PLUS_SCAN
+     | MAX_SCAN
+     | MIN_SCAN
+     | OR_SCAN
+     | AND_SCAN
+     | ISEQ
+     | SUM
+     | MAX_VAL
+     | MIN_VAL 
+     | ANY
+     | ALL
+     | COUNT
+     | MAX_INDEX
+     | MIN_INDEX
+     (* Sequence reordering *)
+     | WRITE                      (* "<-" *)
+     | GET                        (* "->" *)
+     | PERMUTE
+     | ROTATE
+     | REVERSE
+     (* Sequence manipulation *)
+     | PACK
+     | CONCAT
+     | SUBSEQ
+     | DROP
+     | TAKE
+     | ODD_ELTS
+     | EVEN_ELTS
+     | INTERLEAVE
+     | LENGTH_FROM_FLAGS
+     (* Nested sequences *)
+     | PARTITION
+     | FLATTEN
+     | SPLIT
+     | BOTTOP
+     | HEAD_REST
+     | REST_TAIL
+     (* Other sequence functions *)
+     | SORT
+     | RANK
+     | COLLECT
+     | INT_COLLECT
+     | KTH_SMALLEST
+     | FIND
+     | SEARCH_FOR_SUBSEQS
+     | NO_DUPLICATES
+     | UNION
+     | INTERSECTION
+     | NAME
+     | TRANSPOSE
+     (*** B.3 Operations on any type ***)
+     | EQL
+     | HASH
+     | SELECT
+     | ID
+     (*** B.4 String manipulation operations ***)	      
+     | PAD
+     | TO_STRING
+     | EXP_STRING
+     | LINIFY
+     | WORDIFY
+     | UPPERCASE
+     | LOWERCASE
+     | STRING_EQL
+     | PARSE_INT
+     | PARSE_FLOAT
+     (* String constants *)	       
+     | NEWLINE
+     | SPACE
+     | TAB
+     (*** Bonus Functions: not in the manual ***)
+     | DIGITP
+     | FIRST
+     | GET_FN (* Different from GET op, '->' *)
+     | INDEX
+     | MULT_SCAN
+     | NEXT
+     | PREV
+
+   (*** B.5 Side-effecting operations ***)
+   datatype se_code
+     (* I/O *)
+     = PRINT_CHAR
+     | PRINT_STRING
+     | WRITE_OBJ_TO_FILE
+     | WRITE_STRING_TO_FILE
+     | APPEND_STRING_TO_FILE
+     | READ_OBJ_FROM_FILE
+     | READ_STRING_FROM_FILE
+     | READ_INT_SEQ_FROM_FILE
+     | READ_FLOAT_SEQ_FROM_FILE
+     | OPEN_IN_FILE
+     | OPEN_OUT_FILE
+     | CLOSE_FILE
+     | WRITE_CHAR
+     | WRITE_STRING
+     | READ_CHAR
+     | READ_STRING
+     | READ_LINE
+     | READ_WORD
+     | OPEN_CHECK
+     | WRITE_CHECK
+     | READ_CHECK
+     | CLOSE_CHECK
+     (* I/O Constants *)
+     | NULLSTR
+     | STDIN
+     | STDOUT
+     | STDERR
+     (* Plotting functions--not implemented *)
+     (* Shell commands--not implemented *)
+     (* Other side-effection functions *)
+     | TIME
+
+    type prim
+    type se_prim
+    type ty
+    type key
+	
+    val new : code * ty list -> prim
+    val newSE : se_code * ty list -> se_prim
+ 
+    val primToString : prim -> string
+    val SEPrimToString: se_prim -> string
+
+    val codeToString : code -> string
+
+    val newLifted : prim -> prim
+    val getLifted : prim -> prim option
+
+    val same : key * key -> bool
+
+    val hash : key -> word
+
+    structure Tbl : MONO_HASH_TABLE where type Key.hash_key = key
+
+end = struct
+
+   structure T = FlanTypes
+   type ty = T.ty			   
+
+   datatype code 
+    (*** B1. Scalar Operations ***)
+    (* Logic operations *)
+     = OR
+     | NOR
+     | XOR
+     | AND
+     | NAND
+     | NOT
+     (* Predicate operations *)
+     | PLUSP
+     | MINUSP
+     | ZEROP
+     | ODDP
+     | EVENP
+     (* Comparison operations *)
+     | EQ
+     | NEQ
+     | LT
+     | GT
+     | LTE
+     | GTE
+     (* Arithmetic operations *)
+     | PLUS
+     | MINUS
+     | TIMES
+     | DIV
+     | POW
+     | NEG
+     | ABS
+     | DIFF
+     | MAX
+     | MIN
+     | REM
+     | LSHIFT
+     | RSHIFT
+     | SQRT
+     | ISQRT
+     | LN
+     | LOG
+     | EXP
+     | EXPT
+     | SIN
+     | COS
+     | TAN
+     | ASIN
+     | ACOS
+     | ATAN
+     | SINH
+     | COSH
+     | TANH
+     (* Conversion operations *)
+     | BTOI
+     | CODE_CHAR
+     | CHAR_CODE
+     | FLOAT
+     | CEIL
+     | FLOOR
+     | TRUNC
+     | ROUND
+     (* Rand operations *)
+     | RAND
+     | RAND_SEED
+     (* Constants *)
+     | PI
+     | MAX_INT
+     | MIN_INT
+     (*** B.2 Sequence Functions ***)
+     (* Simple sequence functions *)
+     | LENGTH
+     | DIST
+     | ELT
+     | REP
+     | ZIP
+     | UNZIP
+     (* Scans and reduces *)
+     | PLUS_SCAN
+     | MAX_SCAN
+     | MIN_SCAN
+     | OR_SCAN
+     | AND_SCAN
+     | ISEQ
+     | SUM
+     | MAX_VAL
+     | MIN_VAL 
+     | ANY
+     | ALL
+     | COUNT
+     | MAX_INDEX
+     | MIN_INDEX
+     (* Sequence reordering *)
+     | WRITE                      (* "<-" *)
+     | GET                        (* "->" *)
+     | PERMUTE
+     | ROTATE
+     | REVERSE
+     (* Sequence manipulation *)
+     | PACK
+     | CONCAT
+     | SUBSEQ
+     | DROP
+     | TAKE
+     | ODD_ELTS
+     | EVEN_ELTS
+     | INTERLEAVE
+     | LENGTH_FROM_FLAGS
+     (* Nested sequences *)
+     | PARTITION
+     | FLATTEN
+     | SPLIT
+     | BOTTOP
+     | HEAD_REST
+     | REST_TAIL
+     (* Other sequence functions *)
+     | SORT
+     | RANK
+     | COLLECT
+     | INT_COLLECT
+     | KTH_SMALLEST
+     | FIND
+     | SEARCH_FOR_SUBSEQS
+     | NO_DUPLICATES
+     | UNION
+     | INTERSECTION
+     | NAME
+     | TRANSPOSE
+     (*** B.3 Operations on any type ***)
+     | EQL
+     | HASH
+     | SELECT
+     | ID
+     (*** B.4 String manipulation operations ***)	      
+     | PAD
+     | TO_STRING
+     | EXP_STRING
+     | LINIFY
+     | WORDIFY
+     | UPPERCASE
+     | LOWERCASE
+     | STRING_EQL
+     | PARSE_INT
+     | PARSE_FLOAT
+     (* String constants *)	       
+     | NEWLINE
+     | SPACE
+     | TAB
+     (*** Bonus Functions: not in the manual ***)
+     | DIGITP
+     | FIRST
+     | GET_FN (* Different from GET op, '->' *)
+     | INDEX
+     | MULT_SCAN
+     | NEXT
+     | PREV
+
+   (*** B.5 Side-effecting operations ***)
+   datatype se_code
+     (* I/O *)
+     = PRINT_CHAR
+     | PRINT_STRING
+     | WRITE_OBJ_TO_FILE
+     | WRITE_STRING_TO_FILE
+     | APPEND_STRING_TO_FILE
+     | READ_OBJ_FROM_FILE
+     | READ_STRING_FROM_FILE
+     | READ_INT_SEQ_FROM_FILE
+     | READ_FLOAT_SEQ_FROM_FILE
+     | OPEN_IN_FILE
+     | OPEN_OUT_FILE
+     | CLOSE_FILE
+     | WRITE_CHAR
+     | WRITE_STRING
+     | READ_CHAR
+     | READ_STRING
+     | READ_LINE
+     | READ_WORD
+     | OPEN_CHECK
+     | WRITE_CHECK
+     | READ_CHECK
+     | CLOSE_CHECK
+     (* I/O Constants *)
+     | NULLSTR
+     | STDIN
+     | STDOUT
+     | STDERR
+     (* Plotting functions--not implemented *)
+     (* Shell commands--not implemented *)
+     (* Other side-effection functions *)
+     | TIME
+
+   type key = code * ty list
+
+   (* How to deal w/ type vars vs. fxn type? *)
+   datatype prim = P of {
+	    code : code,
+	    ty : ty list, (* type variables *)
+	    funty : ty * ty,
+	    stamp : Stamp.stamp,
+	    isLifted : bool,
+	    lifted : PropList.holder
+   }
+
+   (* side-effecting primitives *)
+   datatype se_prim = PS of {
+	    code : se_code,
+	    ty : ty list,
+	    funty : ty * ty,
+	    stamp : Stamp.stamp
+   }
+
+   fun getFunTy(code, []) = (case code
+      of ODDP => (T.tyInt, T.tyBool)
+       | EVENP => (T.tyInt, T.tyBool)
+       | REM => (T.TyTuple[T.tyInt, T.tyInt], T.tyInt)
+       | LSHIFT => (T.TyTuple[T.tyInt, T.tyInt], T.tyInt)
+       | RSHIFT => (T.TyTuple[T.tyInt, T.tyInt], T.tyInt)
+       | SQRT => (T.tyFloat, T.tyFloat)
+       | ISQRT => (T.tyInt, T.tyInt)
+       | LN => (T.tyFloat, T.tyFloat)
+       | LOG => (T.tyFloat, T.tyFloat)
+       | EXP => (T.tyFloat, T.tyFloat)
+       | EXPT => (T.TyTuple[T.tyFloat, T.tyFloat], T.tyFloat)
+       | SIN => (T.tyFloat, T.tyFloat)
+       | COS => (T.tyFloat, T.tyFloat)
+       | TAN => (T.tyFloat, T.tyFloat)
+       | ASIN => (T.tyFloat, T.tyFloat)
+       | ACOS => (T.tyFloat, T.tyFloat)
+       | ATAN => (T.tyFloat, T.tyFloat)
+       | SINH => (T.tyFloat, T.tyFloat)
+       | COSH => (T.tyFloat, T.tyFloat)
+       | TANH => (T.tyFloat, T.tyFloat)
+       | BTOI => (T.tyBool, T.tyInt)
+       | CODE_CHAR => (T.tyInt, T.tyChar)
+       | CHAR_CODE => (T.tyChar, T.tyInt)
+       | FLOAT => (T.tyInt, T.tyFloat)
+       | CEIL => (T.tyFloat, T.tyInt)
+       | FLOOR => (T.tyFloat, T.tyInt)
+       | TRUNC => (T.tyFloat, T.tyInt)
+       | ROUND => (T.tyFloat, T.tyInt)
+       | ISEQ => (T.TyTuple[T.tyInt, T.tyInt, T.tyInt], T.TySeq(T.tyInt))
+       | COUNT => (T.TySeq(T.tyBool), T.tyInt)
+       | PI => (T.TyTuple [], T.tyFloat)
+       | MAX_INT  => (T.TyTuple [], T.tyInt)
+       | MIN_INT => (T.TyTuple [] , T.tyInt)
+       | LENGTH_FROM_FLAGS => (T.TySeq T.tyBool, T.TySeq T.tyInt)
+       | PAD => (T.TyTuple[T.tyString, T.tyInt], T.tyString)
+       | EXP_STRING => (T.TyTuple[T.tyFloat, T.tyInt], T.tyString)
+       | LINIFY => (T.tyString, T.TySeq T.tyString)
+       | WORDIFY => (T.tyString, T.TySeq T.tyString)
+       | UPPERCASE => (T.tyChar, T.tyChar)
+       | LOWERCASE => (T.tyChar, T.tyChar)
+       | STRING_EQL => (T.TyTuple[T.tyString, T.tyString], T.tyBool)
+       | PARSE_INT => (T.tyString, T.TyTuple[T.tyInt, T.tyBool])
+       | PARSE_FLOAT => (T.tyString, T.TyTuple[T.tyInt, T.tyBool])
+       | NEWLINE => (T.TyTuple [], T.tyString)
+       | SPACE => (T.TyTuple [], T.tyString)
+       | TAB => (T.TyTuple [], T.tyString)
+       | DIGITP => (T.tyChar, T.tyBool)
+       | INDEX => (T.tyInt, T.TySeq T.tyInt)
+       | _ => raise Fail "Wrong number of type arguments for this primitive"
+      (* end case *))
+     | getFunTy(code, a::[]) = (case code
+      of OR => (T.TyTuple [a, a], a)
+       | NOR => (T.TyTuple [a, a], a)
+       | XOR => (T.TyTuple[a, a], a)
+       | AND => (T.TyTuple[a, a], a)
+       | NAND => (T.TyTuple[a, a], a)
+       | NOT => (a, a)
+       | PLUSP => (a, T.tyBool)
+       | MINUSP => (a, T.tyBool)
+       | ZEROP => (a, T.tyBool)
+       | EQ => (T.TyTuple[a, a], T.tyBool)
+       | NEQ => (T.TyTuple[a, a], T.tyBool)
+       | LT => (T.TyTuple[a, a], T.tyBool)
+       | GT => (T.TyTuple[a, a], T.tyBool)
+       | LTE => (T.TyTuple[a, a], T.tyBool)
+       | GTE => (T.TyTuple[a, a], T.tyBool)
+       | PLUS => (T.TyTuple[a, a], a)
+       | MINUS => (T.TyTuple[a, a], a)
+       | TIMES => (T.TyTuple[a, a], a)
+       | DIV => (T.TyTuple[a, a], a)
+       | POW => (T.TyTuple[a, T.tyInt], a)
+       | NEG => (a, a)
+       | ABS => (a, a)
+       | DIFF => (T.TyTuple[a, a], a)
+       | MAX  => (T.TyTuple[a, a], a)
+       | MIN => (T.TyTuple[a, a], a)
+       | RAND => (a, a)
+       | RAND_SEED => (a, T.tyBool)
+       | LENGTH => (T.TySeq a, T.tyInt)
+       | DIST => (T.TyTuple[a, T.tyInt], T.TySeq a)
+       | ELT => (T.TyTuple[T.TySeq a, T.tyInt], a)
+       | REP => (T.TyTuple[T.TySeq a, a, T.tyInt], T.TySeq a)
+       | PLUS_SCAN => (T.TySeq a, T.TySeq a)
+       | MAX_SCAN => (T.TySeq a, T.TySeq a)
+       | MIN_SCAN => (T.TySeq a, T.TySeq a)
+       | OR_SCAN => (T.TySeq a, T.TySeq a)
+       | AND_SCAN => (T.TySeq a, T.TySeq a)
+       | SUM => (T.TySeq a, a)
+       | MAX_VAL => (T.TySeq a, a)
+       | MIN_VAL => (T.TySeq a, a)
+       | ANY => (T.TySeq a, a)
+       | ALL => (T.TySeq a, a)
+       | MAX_INDEX => (T.TySeq a, T.tyInt)
+       | MIN_INDEX => (T.TySeq a, T.tyInt) 
+       | WRITE => (T.TyTuple[T.TySeq a, T.TySeq(T.TyTuple[T.tyInt, a])], T.TySeq a)
+       | GET => (T.TyTuple[T.TySeq a, T.tyInt], T.TySeq a)                    
+       | PERMUTE => (T.TyTuple[T.TySeq a, T.TySeq(T.tyInt)], T.TySeq a)
+       | ROTATE => (T.TyTuple[T.TySeq a, T.tyInt], T.TySeq a)
+       | REVERSE => (T.TySeq a, T.TySeq a)
+       | PACK => (T.TySeq(T.TyTuple[a, T.tyBool]), T.TySeq a)
+       | CONCAT => (T.TyTuple[T.TySeq a, T.TySeq a], T.TySeq a)
+       | SUBSEQ => (T.TyTuple[T.TySeq a, T.tyInt, T.tyInt], T.TySeq a)
+       | DROP => (T.TyTuple[T.TySeq a, T.tyInt], T.TySeq a)
+       | TAKE => (T.TyTuple[T.TySeq a, T.tyInt], T.TySeq a)
+       | ODD_ELTS => (T.TySeq a, T.TySeq a)
+       | EVEN_ELTS => (T.TySeq a, T.TySeq a)
+       | INTERLEAVE => (T.TyTuple[T.TySeq a, T.TySeq a], T.TySeq a)
+       | PARTITION => (T.TyTuple[T.TySeq a, T.TySeq T.tyInt], T.TySeq(T.TySeq a))
+       | FLATTEN => (T.TySeq(T.TySeq a), T.TySeq a)
+       | SPLIT => (T.TyTuple[T.TySeq a, T.TySeq T.tyBool], T.TySeq(T.TySeq a))
+       | BOTTOP => (T.TySeq a, T.TySeq(T.TySeq a))
+       | HEAD_REST => (T.TySeq a, T.TyTuple[a, T.TySeq a])
+       | REST_TAIL => (T.TySeq a, T.TyTuple[T.TySeq a, a])
+       | SORT => (T.TySeq a, T.TySeq a)
+       | RANK => (T.TySeq a, T.TySeq T.tyInt)
+       | INT_COLLECT => (T.TySeq(T.TyTuple[T.tyInt, a]), T.TySeq(T.TyTuple[T.tyInt, T.TySeq a]))
+       | KTH_SMALLEST => (T.TyTuple[T.TySeq a, T.tyInt], a)
+       | FIND => (T.TyTuple[a, T.TySeq a], T.tyInt)
+       | SEARCH_FOR_SUBSEQS => (T.TyTuple[T.TySeq a, T.TySeq a], T.TySeq T.tyInt)
+       | NO_DUPLICATES => (T.TySeq a, T.TySeq a)
+       | UNION => (T.TyTuple[T.TySeq a, T.TySeq a], T.TySeq a)
+       | INTERSECTION => (T.TyTuple[T.TySeq a, T.TySeq a], T.TySeq a)
+       | NAME => (T.TySeq a, T.TySeq T.tyInt)
+       | TRANSPOSE => (T.TySeq (T.TySeq a), T.TySeq (T.TySeq a))
+       | EQL => (T.TyTuple[a, a], T.tyBool)
+       | HASH => (T.TyTuple[a, T.tyInt], T.tyInt)
+       | SELECT => (T.TyTuple[T.tyBool, a, a], a)
+       | ID => (a, a)
+       | TO_STRING => (a, T.tyString)
+       | GET_FN => (T.TyTuple[T.TySeq a, T.TySeq T.tyInt], T.TySeq a)
+       | MULT_SCAN => (T.TySeq a, T.TySeq a)
+       | NEXT => (T.TyTuple[T.TySeq a, a], T.TySeq a)
+       | PREV => (T.TyTuple[T.TySeq a, a], T.TySeq a)
+       | _ => raise Fail "Wrong number of type arguments for this primitive"
+      (* end case *))
+     | getFunTy(code, a::b::[]) = (case code				 
+       of ZIP => (T.TyTuple[T.TySeq a, T.TySeq b], T.TySeq(T.TyTuple[a, b]))
+       | UNZIP => (T.TySeq(T.TyTuple[a, b]), T.TyTuple[T.TySeq a, T.TySeq b])
+       | COLLECT => (T.TySeq(T.TyTuple[b, a]), T.TySeq(T.TyTuple[b, T.TySeq a]))
+       | FIRST => (T.TyTuple[a, b], a)
+       | _ => raise Fail "Wrong number of type arguments for this primitive"
+      (* end case *))
+     | getFunTy(_, _) = raise Fail "Too many type arguments"
+
+   fun getSEFunTy(se_code, []) = (case se_code
+       of PRINT_CHAR => (T.tyChar, T.tyBool)
+       | PRINT_STRING => (T.tyString, T.tyBool)
+       | WRITE_STRING_TO_FILE => (T.TyTuple[T.tyString, T.tyString], T.tyBool)
+       | APPEND_STRING_TO_FILE => (T.TyTuple[T.tyString, T.tyString], T.tyBool)
+       | READ_STRING_FROM_FILE => (T.tyString, T.tyString)
+       | READ_INT_SEQ_FROM_FILE => (T.tyString, T.TySeq(T.tyInt))
+       | READ_FLOAT_SEQ_FROM_FILE => (T.tyString, T.TySeq(T.tyFloat))
+       | OPEN_IN_FILE => (T.tyString, T.TyTuple[T.tyStream, T.tyBool, T.tyString])
+       | OPEN_OUT_FILE => (T.tyString, T.TyTuple[T.tyStream, T.tyBool, T.tyString])
+       | CLOSE_FILE => (T.tyStream, T.TyTuple[T.tyBool, T.tyString])
+       | WRITE_CHAR => (T.TyTuple[T.tyChar, T.tyStream], T.TyTuple[T.tyBool, T.tyStream])
+       | WRITE_STRING => (T.TyTuple[T.tyString, T.tyStream], T.TyTuple[T.tyBool, T.tyStream])
+       | READ_CHAR => (T.tyStream, T.TyTuple[T.tyChar, T.tyBool, T.tyString])
+       | READ_STRING => (T.TyTuple[T.tyString, T.tyInt, T.tyStream], T.TyTuple[T.tyString, T.tyBool, T.tyString])
+       | READ_LINE => (T.tyStream, T.TyTuple[T.TyTuple[T.tyString, T.tyBool], T.tyBool, T.tyString])
+       | READ_WORD => (T.tyStream, T.TyTuple[T.TyTuple[T.tyString, T.tyChar, T.tyBool], T.tyBool, T.tyString])
+       | OPEN_CHECK => (T.TyTuple[T.tyStream, T.tyBool, T.tyString], T.tyStream)
+       | WRITE_CHECK => (T.TyTuple[T.tyBool, T.tyString], T.tyBool)
+       | CLOSE_CHECK => (T.TyTuple[T.tyBool, T.tyString], T.tyBool)
+       | NULLSTR => (T.TyTuple [], T.tyStream)
+       | STDIN => (T.TyTuple [], T.tyStream)
+       | STDOUT => (T.TyTuple [], T.tyStream)
+       | STDERR => (T.TyTuple [], T.tyStream)
+       | _ => raise Fail "Wrong number of type arguments for this primitive"
+      (* end case *))
+     | getSEFunTy(se_code, a::[]) = (case se_code
+      of WRITE_OBJ_TO_FILE => (T.TyTuple[a, T.tyString], T.tyBool)
+       | READ_OBJ_FROM_FILE => (T.TyTuple[a, T.tyString], a)
+       | READ_CHECK => (T.TyTuple[a, T.tyBool, T.tyString], a)
+       | TIME => (a, T.TyTuple[a, T.tyFloat])
+       | _ => raise Fail "Wrong number of type arguments for this primitive"
+      (* end case *))
+     | getSEFunTy(_, _) = raise Fail "Too many type arguments"
+
+   fun new (code, tys) = P{
+	   code = code,
+	   ty = tys,
+	   funty = getFunTy(code, tys),
+	   stamp = Stamp.new(),
+	   isLifted = false,
+	   lifted = PropList.newHolder()
+	 }
+
+   fun newLifted (code, tys) = P{
+                 code = code,
+		 ty = tys,
+		 funty = getFunTy(code, tys),
+		 stamp = Stamp.new(),
+		 isLifted = true,
+		 lifted = PropList.newHolder()
+	}
+
+   fun newSE (se_code : se_code, tys) = PS{
+	      code = se_code,
+	      ty = tys,
+	      funty = getSEFunTy(se_code, tys),
+	      stamp = Stamp.new()
+	 }
+		
+
+   fun codeToString c = (case c
+    of OR => "or"
+     | NOR => "nor"
+     | XOR => "xor"
+     | AND => "and"
+     | NAND => "nand"
+     | NOT => "not"
+     | PLUSP => "plusp"
+     | MINUSP => "minusp"
+     | ZEROP => "zerop"
+     | ODDP => "oddp"
+     | EVENP => "evenp"
+     | EQ => "=="
+     | NEQ => "/="
+     | LT => "<"
+     | GT => ">"
+     | LTE => "<="
+     | GTE => ">="
+     | PLUS => "+"
+     | MINUS => "-"
+     | TIMES => "*"
+     | DIV => "/"
+     | POW => "^"
+     | NEG => "unary-"
+     | ABS => "abs"
+     | DIFF => "diff"
+     | MAX => "max"
+     | MIN => "min"
+     | REM => "rem"
+     | LSHIFT => "lshift"
+     | RSHIFT => "rshift"
+     | SQRT => "sqrt"
+     | ISQRT => "isqrt"
+     | LN => "ln"
+     | LOG => "log"
+     | EXP => "exp"
+     | EXPT => "expt"
+     | SIN => "sin"
+     | COS => "cos"
+     | TAN => "tan"
+     | ASIN => "asin"
+     | ACOS => "acos"
+     | ATAN => "atan"
+     | SINH => "sinh"
+     | COSH => "cosh"
+     | TANH => "tanh"
+     | BTOI => "btoi"
+     | CODE_CHAR => "code_char"
+     | CHAR_CODE => "char_code"
+     | FLOAT => "float"
+     | CEIL => "ceil"
+     | FLOOR => "floor"
+     | TRUNC => "trunc"
+     | ROUND => "round"
+     | RAND => "rand"
+     | RAND_SEED => "rand_seed"
+     | PI  => "pi"
+     | MAX_INT => "max_int"
+     | MIN_INT => "min_int"
+     | LENGTH => "#"
+     | DIST => "dist"
+     | ELT => "elt"
+     | REP => "rep"
+     | ZIP => "zip"
+     | UNZIP => "unzip"
+     | PLUS_SCAN => "plus_scan"
+     | MAX_SCAN => "max_scan"
+     | MIN_SCAN => "min_scan"
+     | OR_SCAN => "or_scan"
+     | AND_SCAN => "and_scan"
+     | ISEQ => "iseq"
+     | SUM => "sum"
+     | MAX_VAL => "max_val"
+     | MIN_VAL  => "min_val"
+     | ANY => "any"
+     | ALL => "all"
+     | COUNT => "count"
+     | MAX_INDEX => "max_index"
+     | MIN_INDEX => "min_index"
+     | WRITE  => "<-"
+     | GET => "->"
+     | PERMUTE => "permute"
+     | ROTATE => "rotate"
+     | REVERSE => "reverse"
+     | PACK => "pack"
+     | CONCAT => "++"
+     | SUBSEQ => "subseq"
+     | DROP => "drop"
+     | TAKE => "take"
+     | ODD_ELTS => "odd_elts"
+     | EVEN_ELTS => "even_elts"
+     | INTERLEAVE => "interleave"
+     | LENGTH_FROM_FLAGS => "length_from_flags"
+     | PARTITION => "partition"
+     | FLATTEN => "flatten"
+     | SPLIT => "split"
+     | BOTTOP => "bottop"
+     | HEAD_REST => "head_rest"
+     | REST_TAIL => "rest_tail"
+     | SORT => "sort"
+     | RANK => "rank"
+     | COLLECT => "collect"
+     | INT_COLLECT => "int_collect"
+     | KTH_SMALLEST => "kth_smallest"
+     | FIND => "find"
+     | SEARCH_FOR_SUBSEQS => "search_for_subseqs"
+     | NO_DUPLICATES => "no_duplicates"
+     | UNION => "union"
+     | INTERSECTION => "intersection"
+     | NAME => "name"
+     | TRANSPOSE => "transpose"
+     | EQL => "eql"
+     | HASH => "hash"
+     | SELECT => "select"
+     | ID => "identity"
+     | PAD => "||"
+     | TO_STRING => "@"
+     | EXP_STRING => "exp_string"
+     | LINIFY => "linify"
+     | WORDIFY => "wordify"
+     | UPPERCASE => "uppercase"
+     | LOWERCASE => "lowercase"
+     | STRING_EQL => "string_eql"
+     | PARSE_INT => "parse_int"
+     | PARSE_FLOAT => "parse_float"
+     | NEWLINE => "newline"
+     | SPACE => "space"
+     | TAB => "tab"
+     | DIGITP => "digitp"
+     | FIRST => "first"
+     | GET_FN  => "get"
+     | INDEX => "index"
+     | MULT_SCAN => "mult_scan"
+     | NEXT => "next"
+     | PREV => "previous"
+    (* end case *))
+
+   fun SECodeToString c = (case c of
+       PRINT_CHAR => "print_char"
+     | PRINT_STRING => "print_string"
+     | WRITE_OBJ_TO_FILE => "write_object_to_file"
+     | WRITE_STRING_TO_FILE => "write_string_to_file"
+     | APPEND_STRING_TO_FILE => "append_string_to_file"
+     | READ_OBJ_FROM_FILE => "read_object_from_file"
+     | READ_STRING_FROM_FILE => "read_string_from_file"
+     | READ_INT_SEQ_FROM_FILE => "read_int_seq_from_file"
+     | READ_FLOAT_SEQ_FROM_FILE => "read_float_seq_from_file"
+     | OPEN_IN_FILE => "open_in_file"
+     | OPEN_OUT_FILE => "open_out_file"
+     | CLOSE_FILE => "close_file"
+     | WRITE_CHAR => "write_char"
+     | WRITE_STRING => "write_string"
+     | READ_CHAR => "read_char"
+     | READ_STRING => "read_string"
+     | READ_LINE => "read_line"
+     | READ_WORD => "read_word"
+     | OPEN_CHECK => "open_check"
+     | WRITE_CHECK => "write_check"
+     | READ_CHECK => "read_check"
+     | CLOSE_CHECK => "close_check"
+     | NULLSTR => "nullstr"
+     | STDIN => "stdin"
+     | STDOUT => "stdout"
+     | STDERR => "stderr"
+     | TIME => "time"
+    (* end case *))
+	      
+
+   (* PropList stuff for getting lifted version of function. *)
+   local
+       fun liftedOf (P{lifted, ...}) = lifted
+       fun createLifted (P{code, ty, ...} : prim) : prim ref = 
+	   ref (newLifted(code, map (fn t => FlanTypes.TySeq(t)) ty))
+
+       val {clrFn, getFn, setFn, peekFn} = PropList.newProp (liftedOf, (fn p => createLifted p))
+   in
+   fun getLifted (p : prim) : prim option = let
+       val x = peekFn p
+   in
+       (case x
+	 of SOME pr => SOME (!pr)
+	  | NONE => NONE
+       (* end case *))
+   end
+
+   fun newLifted p = !(getFn p)
+   end
+
+   fun same ((c1 : code, ts1), (c2 : code, ts2)) = (c1 = c2) andalso FlanTypes.sameTys(ts1, ts2)
+   fun hash (c, ts) = let
+       val tyString = concat(map FlanTypes.toString ts)
+   in
+       HashString.hashString (concat[codeToString c, tyString])
+   end
+		     
+   structure Tbl = HashTableFn (		     
+     struct
+	type hash_key = key
+	val hashVal = hash
+	val sameKey = same
+     end)
+
+   fun typesToString tys = concat(map (fn t => FlanTypes.toString t) tys)
+
+   fun primToString (P{code, ty, isLifted, ...}) =
+       if isLifted
+       then concat[codeToString code,"<", 
+		   typesToString ty,">"]
+       else concat[codeToString code, "^",
+		   typesToString ty, ">"]
+   (* Should we print stamps too? *)
+
+   fun SEPrimToString (PS{code, ty, ...}) = 
+       concat[SECodeToString code,"<",
+	      typesToString ty,">"]
+
+	   
+end

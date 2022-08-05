@@ -1,0 +1,4 @@
+commands_sml.in		CommandsFrag	code to implement NESL "commands" on the CPU-side
+cpu-types_sml.in	CPUTypesFrag	type definitions for CPU-side code
+header_sml.in		HeaderFrag	generated file header
+pick-dev_sml.in		PickDevFrag	code for picking the cuda device

@@ -1,0 +1,10 @@
+This file is a list of possible improvements to the compiler.
+
+1) vectorization avoidance
+
+2) piecewise execution
+
+3) CPU-side fusion of internal operations; e.g., creating a sequence and
+   then converting it to a segdes could be replaced by directly creating
+   the segdes.
+

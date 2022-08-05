@@ -1,0 +1,21 @@
+#ifndef NDEBUG
+
+static void HandleError (cudaError_t err, const char *file, int line)
+{
+    std::cerr << "** Error: " << cudaGetErrorString(err) << " in "
+	<< file << " at line " << line << std::endl;
+    exit (EXIT_FAILURE);
+}
+
+#define CHECK_ERROR(STMT)				\
+    do {						\
+	cudaError_t _err_ = STMT;			\
+	if (_err_ != cudaSuccess)			\
+	    HandleError(_err_, __FILE__, __LINE__);	\
+    } while (0)
+
+#else
+
+#define CHECK_ERROR(STMT)	STMT
+
+#endif

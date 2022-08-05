@@ -1,0 +1,10 @@
+// CUDA code generated from @SRCFILE@
+//
+
+#include <utility>
+#include <iostream>
+#include <cstring>
+#include <cuda_runtime.h>
+#include <sys/resource.h>
+#include <stdint.h>
+#include <stdlib.h>

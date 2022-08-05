@@ -1,0 +1,73 @@
+Check out the code:
+$ svn co https://smlnj-gforge.cs.uchicago.edu/svn/ndp2gpu/trunk/nesl
+
+Make the serial version of the VCODE interpreter:
+$ cd nesl
+$ make serial
+
+Run NESL:
+$ clisp
+[1]> (load "neslsrc/build.lisp")
+[2]> (nesl)
+
+You are now in NESL. For example, you can now do:
+<Nesl> set arg_check off;
+<Nesl> load "bench/qs.nesl";
+
+% Loading bench/qs.nesl. %
+<Nesl> qs(1000000);
+
+Compiling..Writing..Loading..Running..
+Exiting..Reading..
+it = (0, 0.288018) : int, float
+<Nesl> 
+
+If you want to dump a VCODE file that runs a given expression:
+<Nesl> dump vcode "out.vcode" qs(12345678);
+
+Compiling..Writing..
+<Nesl> 
+
+To handle the GPU version, first you need to install and build the NVIDIA GPU Computing SDK. Then, change the path in cvl/cuda/Makefile to point at that directory.
+
+$ make cuda
+
+Run NESL as you did before:
+$ clisp
+[1]> (load "neslsrc/build.lisp")
+[2]> (nesl)
+
+You are now in NESL, and need to change the configuration:
+<Nesl> set arg_check off;
+<Nesl> set config cuda;
+
+At this point, programs will be run against the CUDA backend.
+
+If you want to run the fusion optimizations on the code, you will have to do a little
+bit more work. Assuming you want to optimize the file "out.vcode" from before, you would:
+
+First, install Standard ML of New Jersey (http://www.smlnj.org) and compile the fusion library..
+$ cd fusion
+$ sml
+[larsberg@thor fusion]$ sml
+Standard ML of New Jersey v110.73 [built: Sat Oct  8 14:56:20 2011]
+- CM.make "sources.cm";
+...
+[New bindings added.]
+val it = true : bool
+- 
+
+Then, run it on the file:
+- Main.doFile "../out.vcode";
+val it = () : unit
+- 
+
+The files out.fcode and out.cu should now exist next to the file out.vcode. If
+the optimizer generates an error, please contact us!
+
+To use the generated fused vcode and CUDA code, first compile the .cu file into a shared library. For example, assuming a file named "pi.cu":
+$ nvcc -shared --linker-options -soname,pi.so -opi.so -arch=sm_20 --compiler-options -fPIC --compiler-options -Wall -DCUDA -DNDEBUG -I/home/larsberg/NVIDIA_GPU_Computing_SDK/C/common/inc/ -I../include -I../vcode pi.cu
+
+Then, run the VCODE CUDA backend on that file and the fused VCODE file directly:
+$ bin/vinterp.cuda -m 10000000 -l examples/pi.so examples/pi.fcode
+

@@ -1,0 +1,51 @@
+% mandelbrot.nesl %
+
+datatype complex (float, float);
+datatype color (float, float, float);
+
+function c_re (complex(x, y)) = x $
+function c_im (complex(x, y)) = y $
+
+function c_add (x, y) =
+    let complex(x1, x2) = x;
+        complex(y1, y2) = y;
+    in
+        complex(x1+y1, x2+y2) $
+
+function c_sqr (x) =
+    let complex(x1, x2) = x;
+    in
+        complex(x1^2 - x2^2, 2.0*x1*x2) $
+
+reso = 2000;
+escape = 4.0;
+maxiter = 2000;
+black = color(0.0, 0.0, 0.0);
+
+function iterate (i, z, c) : (int, complex, complex) -> int =
+    let z = c_add(c_sqr(z), c);
+        i = i+1;
+	z2 = c_sqr(z);
+     in
+        if (c_re(z2) + c_im(z2) > escape) or (i > maxIter)
+	  then i
+	  else iterate (i, z, c) $
+
+function mand (x, y) = iterate (0, complex(0.0, 0.0), complex(x, y)) $
+
+function lerp (x, y, lo, tt, hi) = x * (1.0 - ((tt - lo) / (hi - lo))) + y $
+
+function coord (fov, reso, x, idx) = lerp(x - fov, x + fov, 1.0, float(idx), float(reso)) $
+
+function mandelbrot (center, fov, reso) =
+  { { mand (coord(fov, reso, c_re(center), crIdx), coord(fov, reso, c_im(center), ciIdx))
+    : crIdx in [1:reso]
+    }
+  : ciIdx in [1:reso] }
+$
+
+% for whole thing
+mandelbrot (complex(0.0, 0.0), 2.0, 2000);
+%
+
+mandelbrot (complex(-1.2, -0.3), 0.16, 2000);

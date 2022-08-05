@@ -1,0 +1,109 @@
+// CPU-side representation of sequences
+template <typename T>
+struct Sequence {
+    int32_t	_len;		// sequence length
+    T		*_datap;	// GPU-side data
+    T		*_cache;	// CPU-side cache of GPU-side values
+
+    Sequence (int len)
+	: _len(len), _cache(0)
+    {
+	cudaMalloc (&this->_datap, len * sizeof(T));
+    }
+    Sequence (int len, const T *initData)
+	: _len(len), _cache(0)
+    {
+	CHECK_ERROR( cudaMalloc (&this->_datap, len * sizeof(T)) );
+	CHECK_ERROR( cudaMemcpy (this->_datap, initData, len * sizeof(T), cudaMemcpyHostToDevice) );
+    }
+
+    void free ()
+    {
+	cudaFree (&this->_datap);
+	this->_datap = 0;
+	if (this->_cache != 0) {
+	    this->_cache = 0;
+	    delete this->_cache;
+	}
+    }
+
+    T extract (int i)
+    {
+	T result;
+	CHECK_ERROR( cudaMemcpy (&result, (void *)((T *)this->_datap+i), sizeof(T), cudaMemcpyDeviceToHost) );
+	return result;
+    }
+
+    void fetch ()
+    {
+	if (this->_cache == 0) {
+	    size_t nbytes = this->_len * sizeof(T);
+	    this->_cache = (T *) std::malloc(nbytes);
+	    CHECK_ERROR( cudaMemcpy (this->_cache, this->_datap, nbytes, cudaMemcpyDeviceToHost) );
+	}
+    }
+
+};
+
+typedef Sequence<int32_t>	IntSeq_t;
+typedef Sequence<float>		FloatSeq_t;
+typedef Sequence<bool>		BoolSeq_t;
+typedef Sequence<char>		CharSeq_t;
+
+struct Segdes {
+    int32_t	_len;		// total length of described sequence
+    int32_t	_nsegs;		// number of sequences
+    uint32_t	*_datap;	// GPU-side data
+    uint32_t	*_cache;	// CPU-side cache of GPU-side values
+};
+
+// code for printing pairs
+template <typename A, typename B>
+inline std::ostream &operator<< (std::ostream &s, std::pair<A, B> const &p)
+{
+    return (s << "<" << p.first << ", " << p.second << ">");
+}
+
+// code for printing sequences (at most 10 values)
+template <typename T>
+static std::ostream &operator << (std::ostream &s, Sequence<T> const &seq)
+{
+    int n = (seq._len < 10) ? seq._len : 10;
+    seq.fetch ();
+    s << "[";
+    for (int i = 0;  i < n;  i++) {
+	s << seq._cache[i];
+	if (i > 0) s << ", ";
+    }
+    if (n < seq._len) {
+	s << " ...]";
+    }
+    else {
+	s << "]";
+    }
+    return s;
+}
+
+#define MAX_BLOCK_WIDTH		@MAX_BLOCK_WIDTH@
+#define THREADS_PER_BLOCK	@THREADS_PER_BLOCK@
+
+// return the block dimension for iterating over a sequence of the given width; we
+// use a 2D grid of 1D blocks.
+inline dim3 _gridDim (int wid)
+{
+    int numBlocks = ((wid + (THREADS_PER_BLOCK-1)) / THREADS_PER_BLOCK);
+    if (numBlocks <= MAX_BLOCK_WIDTH) {
+	return dim3(numBlocks, 1);
+    }
+    else {
+      /* FIXME: want n,m such that wid < n*m, n,m <= MAX_BLOCK_WIDTH, and n*m is smallest such product */
+	std::cerr << "too many blocks" << std::endl;
+	exit (1);
+    }
+
+}
+
+inline dim3 _blockDim (int wid)
+{
+    return dim3(THREADS_PER_BLOCK, 1);
+}

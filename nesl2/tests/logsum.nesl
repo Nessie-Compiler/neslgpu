@@ -1,0 +1,6 @@
+
+function logsum(n) = sum({ln(float(i)) : i in [1:n]}) $
+function lsloop(n,k) = if k == 0 then 0.0 else logsum(n)  + lsloop(n, k-1) $
+function main(n, runs) = let z = logsum(n); (x,y) = time(lsloop(n,runs)) in (x / float(runs), y / float(runs) * 1000.0) $
+
+main(100, 2) $

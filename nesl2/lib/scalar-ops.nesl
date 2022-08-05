@@ -1,0 +1,251 @@
+% scalar-ops.nesl
+=
+= This file was generated from "scalar-ops.lnesl" in the Nesl distribution and then
+= hand edited to fix issues.  The changes are:
+=
+=    - fixed definition of stop_timer function
+=
+=    - changed type argument for some primops from INT to CHAR
+=
+=    - commented out code_chr and chr_code functions
+=
+=    - introduces the prim_rand function.  This function is needed to break recursion in
+=      the primitive function internal_rand.
+%
+
+%-- Nesl functions from "scalar-ops.lnesl" --%
+function prim_exit (a) : int -> int =
+  __prim "EXIT" (a) $
+function start_timer (a) : int -> int =
+  __prim "START_TIMER" (a) $
+function stop_timer (a) : int -> float =
+  __prim "STOP_TIMER" (a) $
+__prim function not (a) : alpha -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "NOT INT" (a)
+    | bool: __prim "NOT BOOL" (a) $
+__prim function `or` (a, b) : (alpha, alpha) -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "OR INT" (a, b)
+    | bool: __prim "OR BOOL" (a, b) $
+__prim function `and` (a, B) : (alpha, alpha) -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "AND INT" (a, B)
+    | bool: __prim "AND BOOL" (a, B) $
+__prim function `xor` (a, b) : (alpha, alpha) -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "XOR INT" (a, b)
+    | bool: __prim "XOR BOOL" (a, b) $
+function `nor` (a, b) : (alpha, alpha) -> alpha :: (alpha in logical) =
+  not(a or b) $
+function `nand` (a, b) : (alpha, alpha) -> alpha :: (alpha in logical) =
+  not(a and b) $
+__prim function `=` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "= INT" (a, b)
+    | float: __prim "= FLOAT" (a, b)
+    | char: __prim "= CHAR" (a, b) $
+__prim function `==` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "= INT" (a, b)
+    | float: __prim "= FLOAT" (a, b)
+    | char: __prim "= CHAR" (a, b) $
+__prim function `/=` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "!= INT" (a, b)
+    | float: __prim "!= FLOAT" (a, b)
+    | char: __prim "!= CHAR" (a, b) $
+__prim function `<` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "< INT" (a, b)
+    | float: __prim "< FLOAT" (a, b)
+    | char: __prim "< CHAR" (a, b) $
+__prim function `>` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "> INT" (a, b)
+    | float: __prim "> FLOAT" (a, b)
+    | char: __prim "> CHAR" (a, b) $
+__prim function `<=` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "<= INT" (a, b)
+    | float: __prim "<= FLOAT" (a, b)
+    | char: __prim "<= CHAR" (a, b) $
+__prim function `>=` (a, b) : (alpha, alpha) -> bool :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim ">= INT" (a, b)
+    | float: __prim ">= FLOAT" (a, b)
+    | char: __prim ">= CHAR" (a, b) $
+__prim function plusp (v) : alpha -> bool :: (alpha in number) =
+  __base_typecase alpha
+    | int: v > 0
+    | float: v > 0.000000 $
+__prim function minusp (v) : alpha -> bool :: (alpha in number) =
+  __base_typecase alpha
+    | int: v < 0
+    | float: v < 0.000000 $
+__prim function zerop (v) : alpha -> bool :: (alpha in number) =
+  __base_typecase alpha
+    | int: v = 0
+    | float: v = 0.000000 $
+function oddp (v) : int -> bool =
+  plusp(1 and v) $
+function evenp (v) : int -> bool =
+  zerop(1 and v) $
+__prim function `+` (a, b) : (alpha, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "+ INT" (a, b)
+    | float: __prim "+ FLOAT" (a, b) $
+__prim function `-` (a, b) : (alpha, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "- INT" (a, b)
+    | float: __prim "- FLOAT" (a, b) $
+__prim function negate (v) : alpha -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: 0 - v
+    | float: 0.000000 - v $
+__prim function select_scalar (flag, a, b) : (bool, alpha, alpha) -> alpha :: (alpha in any) =
+  __base_typecase alpha
+    | bool: __prim "SELECT BOOL" (flag, a, b)
+    | float: __prim "SELECT FLOAT" (flag, a, b)
+    | char: __prim "SELECT CHAR" (flag, a, b)
+    | int: __prim "SELECT INT" (flag, a, b) $
+function abs (x) : alpha -> alpha :: (alpha in number) =
+  select_scalar(plusp(x), x, negate(x)) $
+function diff (x, y) : (alpha, alpha) -> alpha :: (alpha in number) =
+  abs(x - y) $
+function max (a, b) : (alpha, alpha) -> alpha :: (alpha in ordinal) =
+  select_scalar(a > b, a, b) $
+function min (a, b) : (alpha, alpha) -> alpha :: (alpha in ordinal) =
+  select_scalar(a < b, a, b) $
+__prim function `*` (v, d) : (alpha, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "* INT" (v, d)
+    | float: __prim "* FLOAT" (v, d) $
+__prim function div_internal (v, d) : (alpha, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "/ INT" (v, d)
+    | float: __prim "/ FLOAT" (v, d) $
+function `/` (v, d) =
+  div_internal(v, d) $
+function rem_internal (v, d) : (int, int) -> int =
+  __prim "%" (v, d) $
+function rem (v, d) : (int, int) -> int =
+  rem_internal(v, d) $
+function mod (v, d) : (int, int) -> int =
+  rem_internal(v + (d * (1 - (v / d))), d) $
+function reciprocal (v) : float -> float =
+  1.000000 / v $
+function lshift (a, b) : (int, int) -> int =
+  __prim "LSHIFT" (a, b) $
+function rshift (a, b) : (int, int) -> int =
+  __prim "RSHIFT" (a, b) $
+function prim_sqrt (v) : float -> float =
+  __prim "SQRT" (v) $
+function sqrt (v) =
+  prim_sqrt(v) $
+function prim_ln (v) : float -> float =
+  __prim "LOG" (v) $
+function ln (v) : float -> float =
+  prim_ln(v) $
+function log (v, b) : (float, float) -> float =
+  ln(v) / ln(b) $
+function exp (v) : float -> float =
+  __prim "EXP" (v) $
+function expt (v, p) : (float, float) -> float =
+  exp(ln(v) * p) $
+__prim function one (a) : alpha -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: 1
+    | float: 1.000000 $
+__prim function zero (a) : alpha -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: 0
+    | float: 0.000000 $
+function power_internal (a, p) =
+  if p = 1
+    then a
+    else let v = power_internal(a, rshift(p, 1));
+    in
+      if evenp(p)
+        then v * v
+        else a * (v * v) $
+function `^` (a, p) =
+  if p = 0
+    then one(a)
+    else power_internal(a, p) $
+function power_2 (a) =
+  a * a $
+function power_3 (a) =
+  a * (a * a) $
+function gcd (a, b) =
+  if b = 0
+    then a
+    else gcd(b, rem(a, b)) $
+function sin (v) : float -> float =
+  __prim "SIN" (v) $
+function cos (v) : float -> float =
+  __prim "COS" (v) $
+function tan (v) : float -> float =
+  __prim "TAN" (v) $
+function asin (v) : float -> float =
+  __prim "ASIN" (v) $
+function acos (v) : float -> float =
+  __prim "ACOS" (v) $
+function atan (v) : float -> float =
+  __prim "ATAN" (v) $
+function sinh (v) : float -> float =
+  __prim "SINH" (v) $
+function cosh (v) : float -> float =
+  __prim "COSH" (v) $
+function tanh (v) : float -> float =
+  __prim "TANH" (v) $
+function btoi (a) : bool -> int =
+  __prim "B_TO_I" (a) $
+function code_char (a) : int -> char =
+  __prim "I_TO_C" (a) $
+function char_code (a) : char -> int =
+  __prim "C_TO_I" (a) $
+function float (v) : int -> float =
+  __prim "I_TO_F" (v) $
+function ceil (v) : float -> int =
+  __prim "CEIL" (v) $
+function floor (v) : float -> int =
+  __prim "FLOOR" (v) $
+function trunc (v) : float -> int =
+  __prim "TRUNC" (v) $
+function round (v) : float -> int =
+  __prim "ROUND" (v) $
+function isqrt (v) : int -> int =
+  floor(sqrt(float(v))) $
+function prim_rand (v) : int -> int = __prim "RAND" (v) $
+__prim function rand_internal (v) : alpha -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: prim_rand (v)
+    | float: let range = lshift(1, 30)
+    in
+      v * (float(prim_rand(range)) / float(range)) $
+%
+__prim function rand_internal (v) : alpha -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "RAND" (v)
+    | float: let range = lshift(1, 30)
+    in
+      v * (float(rand_internal(range)) / float(range)) $
+%
+function rand (v) =
+  rand_internal(v) $
+function rand_seed (v) : int -> bool =
+  __prim "SRAND INT" (v) $
+__prim function float_num (a) : alpha -> float :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "I_TO_F" (a)
+    | float: (a) $
+__prim function int_to_any (a, b) : (int, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: a
+    | float: float(a) $
+__prim function float_to_any (a, b) : (float, alpha) -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: round(a)
+    | float: a $
+%-- end "scalar-ops.lnesl" --%

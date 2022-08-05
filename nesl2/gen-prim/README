@@ -1,0 +1,4 @@
+This is a one-off hack to extract the definitions of the builtin NESL functions
+from the original NESL compiler sources (specifically, the ".lnesl" files, which
+are Common Lisp code).
+

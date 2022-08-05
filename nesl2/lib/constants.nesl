@@ -1,0 +1,10 @@
+% constants.nesl
+=
+= definitions of builtin constants.
+%
+
+tab = __prim "I_TO_C" (9); % The tab character." %
+newline = __prim "I_TO_C" (10); % The newline character. %
+space = __prim "I_TO_C" (32); % The space character." %
+
+pi = 3.141592653589793;

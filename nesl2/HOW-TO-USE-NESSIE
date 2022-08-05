@@ -1,0 +1,11 @@
+To compile a NESL program to an executable:
+
+1) in the nesl2 directory, run bin/nessie on the program.  For example:
+
+	% bin/nessie tests/muladd.nesl
+
+2) in the directory where the generated CUDA code is, use nvcc to compile it
+   as follows:
+
+	% cd tests
+	% /usr/local/cuda/bin/nvcc -arch sm_20 -o muladd muladd.cu

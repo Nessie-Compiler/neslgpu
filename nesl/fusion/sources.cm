@@ -1,0 +1,62 @@
+(* sources.cm
+ *
+ * COPYRIGHT (c) 2012 The Manticore Project (http://manticore.cs.uchicago.edu)
+ * All rights reserved.
+ *)
+
+Library
+  structure AnalyzeSizes
+  structure Convert
+  structure Error
+  structure Fuse
+  structure Inliner
+  structure Main
+  structure Parser
+  structure PrintSuperOp
+  structure PrintVCode
+  structure PrintVExp
+  structure Reduce
+  structure Sizes
+  structure SuperOp
+  structure SuperOpGen
+  structure VCode
+  structure VCodeGen
+  structure VCodeTyping
+  structure VExp
+
+  structure VCodeCG
+
+  structure MulAdd
+
+is
+
+  $/basis.cm
+  $/smlnj-lib.cm
+  $/pp-lib.cm
+  $/ml-lpt-lib.cm
+
+  analyze-sizes.sml
+  call-graph-fn.sml
+  convert.sml
+  error.sml
+  fuse.sml
+  inliner.sml
+  main.sml
+  parser.sml
+  print-super-op.sml
+  print-vcode.sml
+  print-vexp.sml
+  reduce.sml
+  sizes.sml
+  super-op.sml
+  super-op-gen.sml
+  vcode.sml
+  vcodegen.sml
+  vcode-cg.sml
+  vcode-typing.sml
+  vcode.lex : ml-ulex
+  vcode.grm : ml-antlr
+  vexp.sml
+  vexp-cg.sml
+
+  muladd-vcode.sml

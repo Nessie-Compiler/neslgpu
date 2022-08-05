@@ -1,0 +1,136 @@
+/* these functions implement the various command operators (see common/cmd.sml),
+ * which run on the CPU.
+ */
+
+void EXIT (int sts)
+{
+    exit (sts);
+}
+
+/* Read operations.  The syntax of input is "(" v1 v2 ... ")" for integer, float, and
+ * boolean sequences; a quoted string for string input; and "[" v1 v2 ... "]" for
+ * segment descriptors.
+ */
+
+void READ_INT (bool *statusOut, char **msgOut, int *lenOut, int **dataOut)
+{
+}
+
+void READ_BOOL (bool *statusOut, char **msgOut, int *lenOut, bool **dataOut)
+{
+}
+
+void READ_float (bool *statusOut, char **msgOut, int *lenOut, float **dataOut)
+{
+}
+
+void READ_STRING (bool *statusOut, char **msgOut, int *lenOut, char **dataOut)
+{
+}
+
+void READ_SEGDES (bool *statusOut, char **msgOut, int *lenOut, int **dataOut)
+{
+}
+
+/* Write operations. */
+
+void WRITE_INT (int len, const int *data, bool *statusOut, char **msgOut)
+{
+}
+
+void WRITE_BOOL (int len, const bool *data, bool *statusOut, char **msgOut)
+{
+}
+
+void WRITE_float (int len, const float *data, bool *statusOut, char **msgOut)
+{
+}
+
+void WRITE_STRING (int len, const char *data, bool *statusOut, char **msgOut)
+{
+}
+
+void WRITE_SEGDES (int len, const int *data, bool *statusOut, char **msgOut)
+{
+}
+
+/* File open/close */
+
+void FOPEN (const char *file, int mode, bool *statusOut, char **msgOut, int *fdOut)
+{
+}
+
+void FCLOSE (int fd, bool *statusOut, char **msgOut)
+{
+}
+
+/* File output operations. */
+
+void FWRITE_INT (int fd, int len, const int *data, bool *statusOut, char **msgOut)
+{
+}
+
+void FWRITE_BOOL (int fd, int len, const bool *data, bool *statusOut, char **msgOut)
+{
+}
+
+void FWRITE_float (int fd, int len, const float *data, bool *statusOut, char **msgOut)
+{
+}
+
+void FWRITE_CHAR (int fd, int len, const char *data, bool *statusOut, char **msgOut)
+{
+}
+
+void FWRITE_SEGDES (int fd, int len, const int *data, bool *statusOut, char **msgOut)
+{
+}
+
+/* File input operations. */
+
+void FREAD_INT (bool *statusOut, char **msgOut, int *lenOut, int **dataOut)
+{
+}
+
+void FREAD_BOOL (bool *statusOut, char **msgOut, int *lenOut, bool **dataOut)
+{
+}
+
+void FREAD_float (bool *statusOut, char **msgOut, int *lenOut, float **dataOut)
+{
+}
+
+void FREAD_STRING (bool *statusOut, char **msgOut, int *lenOut, char **dataOut)
+{
+}
+
+void FREAD_SEGDES (bool *statusOut, char **msgOut, int *lenOut, int **dataOut)
+{
+}
+
+void FREAD_CHAR (int fd, int limit, const char *delim, bool *statusOut, char **msgOut, int *stopCond, int *lenOut, char **dataOut)
+{
+}
+
+/* timer operations */
+
+double START_TIMER (int dummy)
+{
+    struct rusage rusage;
+    getrusage(0, &rusage);
+    return (double)rusage.ru_utime.tv_sec + (1.0e-6)*(double)rusage.ru_utime.tv_usec;
+}
+
+float STOP_TIMER (double prevTime)
+{
+    struct rusage rusage;
+    getrusage(0, &rusage);
+    double t = (double)rusage.ru_utime.tv_sec + (1.0e-6)*(double)rusage.ru_utime.tv_usec;
+    return (float)(t - prevTime);
+}
+
+/* seed the random number generator */
+
+void SRAND (int seed)
+{
+}

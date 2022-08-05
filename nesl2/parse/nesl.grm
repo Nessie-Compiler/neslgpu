@@ -1,0 +1,457 @@
+(* nesl.grm
+ *
+ * COPYRIGHT (c) 2012 John Reppy (http://cs.uchicago.edu/~jhr)
+ * All rights reserved.
+ *)
+
+%name Nesl;
+
+%tokens
+	: KW_and		("and")
+	| KW_any		("any")
+	| KW_datatype		("datatype")
+	| KW_else		("else")
+	| KW_function		("function")
+	| KW_if			("if")
+	| KW_in			("in")
+	| KW_let		("let")
+	| KW_logical		("logical")
+	| KW_nand		("nand")
+	| KW_nor		("nor")
+	| KW_number		("number")
+	| KW_or			("or")
+	| KW_ordinal		("ordinal")
+	| KW_time		("time")
+	| KW_then		("then")
+	| KW_xor		("xor")
+        | KW_base_typecase      ("__base_typecase")
+        | KW_poly_typecase      ("__poly_typecase")
+        | KW_prim               ("__prim")
+	| KW_vector		("__vector")
+	| WILD			("_")
+	| COLON			(":")
+	| DCOLON		("::")
+	| COMMA			(",")
+	| SEMICOLON		(";")
+	| DOLLAR		("$")
+	| BAR			("|")
+	| EQ			("=")
+	| DEQ			("==")
+	| LPAREN		("(")
+	| RPAREN		(")")
+	| LBRACE		("{")
+	| RBRACE		("}")
+	| LBRACKET		("[")
+	| RBRACKET		("]")
+	| BASE_LBRACKET		("[:")
+	| BASE_RBRACKET		(":]")
+	| SLASHEQ		("/=")
+	| LT			("<")
+	| LTE			("<=")
+	| GT			(">")
+	| GTE			(">=")
+	| PLUS			("+")
+	| MINUS			("-")
+	| DPLUS			("++")
+	| LARROW		("<-")
+	| RARROW		("->")
+	| STAR			("*")
+	| SLASH			("/")
+	| HAT			("^")
+	| HASH			("#")
+	| AT			("@")
+	| DBAR			("||")
+	| ID of Atom.atom
+	| OPID of Atom.atom	(* e.g., `+` or `<-` *)
+	| INTCONST of IntInf.int
+	| FLOATCONST of string
+	| BOOLCONST of bool
+	| STRINGCONST of string
+	| CHARCONST of char
+	;
+
+%keywords
+  KW_and, KW_any, KW_datatype, KW_else, KW_function, KW_if, KW_in, KW_let, KW_logical,
+  KW_nand, KW_nor, KW_number, KW_or, KW_ordinal, KW_then, KW_xor;
+
+%defs (
+  structure PT = ParseTree
+
+(* apply a mark constructor to a span and a tree *)
+  fun mark cons (span : AntlrStreamPos.span, tr) = cons{span = span, tree = tr}
+
+(* specialize mark functions for common node types *)
+  fun markTop (span : AntlrStreamPos.span, tr) = {span = span, tree = tr}
+
+  fun markTy (_, e as PT.TyMark _) = e
+    | markTy (sp, tr) = mark PT.TyMark (sp, tr)
+  fun markPat (_, e as PT.PatMark _) = e
+    | markPat (sp, tr) = mark PT.PatMark (sp, tr)
+  fun markExp (_, e as PT.ExpMark _) = e
+    | markExp (sp, tr) = mark PT.ExpMark (sp, tr)
+
+(* construct application expressions for left-associative binary operators.  The
+ * arguments are the full span of the expression, the lhs of the top operator, and
+ * a list of (op, right-position, expression) tuples.
+ *)
+  fun mkLBinExp ((leftPos, _), lhs, rhs) = let
+	fun mk (e, (id, rpos, e')::r) = let
+	      val binExp = markExp ((leftPos, rpos), PT.ExpBinary(e, id, e'))
+	      in
+		mk (binExp, r)
+	      end
+	  | mk (e, []) = e
+	in
+	  mk (lhs, rhs)
+	end
+
+(* convert a pattern parse tree into a syntactically equivalent expression tree *)
+  fun patToExp (PT.PatMark m) = patToExp(#tree m)
+    | patToExp (PT.PatPair(p1, p2)) = PT.ExpPair(patToExp p1, patToExp p2)
+    | patToExp (PT.PatCons(id, pat)) = PT.ExpApply(id, patToExp pat)
+    | patToExp (PT.PatVar x) = PT.ExpVar x
+    | patToExp PT.PatWild = PT.ExpVar(Atom.atom "*bogus*")	(* FIXME: probably should avoid this in the grammar *)
+
+(* convert a tuple expression to a list of expressions *)
+  fun tupleToExps (PT.ExpMark{tree = PT.ExpPair(e1, e2), ...}) =
+	e1 :: tupleToExps e2
+    | tupleToExps e = [e]
+
+(* some functions are also keywords, so we need their names here. *)
+val a_any = Atom.atom "any"
+
+);
+
+File
+	: TopLevel*
+		=> (TopLevel)
+	;
+
+TopLevel
+	: "function" FunId Pattern (":" FunTypeDef)? STRINGCONST? "=" Exp EndMark
+		=> (markTop (FULL_SPAN, PT.TopFun(FunId, Pattern, SR, Exp)))
+	| "__prim" "function" FunId Pattern ":" FunTypeDef "=" PrimFunBody EndMark
+		=> (markTop (FULL_SPAN, PT.TopPrimFun(FunId, Pattern, FunTypeDef, PrimFunBody)))
+	| "datatype" ID TypeDef EndMark
+		=> (markTop (FULL_SPAN, PT.TopData(ID, TypeDef)))
+	| %try Pattern "=" Exp EndMark
+		=> (markTop (FULL_SPAN, PT.TopBind(Pattern, Exp)))
+	| %try Exp EndMark
+		=> (markTop (FULL_SPAN, PT.TopExp Exp))
+	;
+
+FunId	: ID		=> (ID)
+	| OPID		=> (OPID)
+	| SpecialId	=> (SpecialId)
+	;
+
+PrimFunBody
+	: "__base_typecase" ID TypecaseRule+
+                => (PT.ExpBaseTypecase(ID, TypecaseRule))
+        | "__poly_typecase" ID "|" Exp "|" Exp ("|" Exp)?
+                => (PT.ExpPolyTypecase(ID, Exp1, Exp2, SR))
+	;
+
+TypecaseRule
+	: "|" TypecaseLHS ":" Exp
+		=> ({span = FULL_SPAN, tree = (TypecaseLHS, Exp)})
+	;
+
+TypecaseLHS
+	: ID
+		=> (ID)
+	| "function"
+		=> (Atom.atom "function")
+	;
+
+EndMark
+	: ";" | "$"
+	;
+
+(******************** Types ********************)
+
+FunTypeDef
+	: TypeExp "->" TypeExp ("::" "(" TypeBinds ")")?
+		=> (PT.TyFun{
+			span = FULL_SPAN,
+			tree = (TypeExp1, TypeExp2, Option.getOpt (SR, []))
+		      })
+	;
+
+TypeDef
+	: TypeExp ("::" "(" TypeBinds ")")?
+		=> (PT.TyDef{
+			span = FULL_SPAN,
+			tree = (TypeExp, Option.getOpt (SR, []))
+		      })
+	;
+
+TypeBinds
+	: TypeBind (";" TypeBind)*
+		=> (TypeBind :: SR)
+	;
+
+TypeBind
+	: ID "in" TypeClass
+		=> ({span = FULL_SPAN, tree = (ID, TypeClass)})
+	;
+
+TypeExp
+	: ID
+		=> (markTy (FULL_SPAN, PT.TyId(ID, [])))
+	| ID "(" TypeList ")"
+		=> (markTy (FULL_SPAN, PT.TyId(ID, TypeList)))
+	| "[" TypeExp "]"
+		=> (markTy (FULL_SPAN, PT.TySeq TypeExp))
+	| "[:" ID ":]"
+		=> (markTy (FULL_SPAN, PT.TyBaseSeq ID))
+	| "(" PairTypes ")"
+		=> (markTy (FULL_SPAN, PairTypes))
+	;
+
+PairTypes
+	: TypeExp ("," PairTypes)?
+		=> (case SR
+		     of NONE => TypeExp
+		      | SOME p => markTy (FULL_SPAN, PT.TyPair(TypeExp, p))
+		    (* end case *))
+	;
+
+TypeList
+	: TypeExp ("," TypeExp)*
+		=> (TypeExp :: SR)
+	;
+
+TypeClass
+	: "number"	=> (TypeBase.NUM)
+	| "ordinal"	=> (TypeBase.ORD)
+	| "logical"	=> (TypeBase.LOGIC)
+	| "any"		=> (TypeBase.ANY)
+	;
+
+(******************** Expressions ********************)
+
+Exp
+	: IfOrLetExp
+	| TupleExp
+	;
+
+IfOrLetExp
+        : "if" Exp "then" Exp "else" Exp
+		=> (markExp (FULL_SPAN, PT.ExpIf(Exp1, Exp2, Exp3)))
+	| "let" ExpBinds ";"? "in" Exp
+		=> (markExp (FULL_SPAN, PT.ExpLet(ExpBinds, Exp)))
+        ;
+
+ExpBinds
+	: ExpBind (";" ExpBind)*
+		=> (ExpBind :: SR)
+	;
+
+ExpBind
+	: Pattern "=" Exp
+		=> (PT.Bind{span = FULL_SPAN, tree = (Pattern, Exp)})
+	;
+
+TupleExp
+	: OrExp ("," TupleRest)?
+		=> (case SR
+		     of NONE => OrExp
+		      | SOME p => markExp(FULL_SPAN, PT.ExpPair(OrExp, p))
+		    (* end case *))
+	;
+
+TupleRest
+        : TupleExp
+        | IfOrLetExp
+        ;
+
+OrExp
+	: AndExp (OrOp AndExp => (OrOp, #2 AndExp_SPAN, AndExp))*
+		=> (mkLBinExp(FULL_SPAN, AndExp, SR))
+	;
+
+OrOp
+	: "or" => (PT.binOpOr) | "nor" => (PT.binOpNor) | "xor" => (PT.binOpXor)
+	;
+
+AndExp
+	: RelExp (AndOp RelExp => (AndOp, #2 RelExp_SPAN, RelExp))*
+		=> (mkLBinExp(FULL_SPAN, RelExp, SR))
+	;
+
+AndOp
+	: "and" => (PT.binOpAnd) | "nand" => (PT.binOpNand)
+	;
+
+RelExp
+	: AddExp (RelOp AddExp => (RelOp, #2 AddExp_SPAN, AddExp))*
+		=> (mkLBinExp(FULL_SPAN, AddExp, SR))
+	;
+
+(* NOTE: The NESL specification does not define "=" as an operator, but the NESL library
+ * code does define it (and uses it).  For now we are mapping it to "==", but we probably
+ * should have a separate BinOp for it.
+ *)
+RelOp
+	: "=" => (PT.binOpEq) | "==" => (PT.binOpEqEq) | "/=" => (PT.binOpNeq)
+	| "<" => (PT.binOpLt) | ">" => (PT.binOpGt)
+	| "<=" => (PT.binOpLte) | ">=" => (PT.binOpGte)
+	;
+
+AddExp
+	: MulExp (AddOp MulExp => (AddOp, #2 MulExp_SPAN, MulExp))*
+		=> (mkLBinExp(FULL_SPAN, MulExp, SR))
+	;
+
+AddOp
+	: "+" => (PT.binOpAdd) | "-" => (PT.binOpSub) | "++" => (PT.binOpConcat)
+	| "<-" => (PT.binOpWrite)
+	;
+
+MulExp
+	: ExpExp (MulOp ExpExp => (MulOp, #2 ExpExp_SPAN, ExpExp))*
+		=> (mkLBinExp(FULL_SPAN, ExpExp, SR))
+	;
+
+MulOp
+	: "*" => (PT.binOpMul) | "/" => (PT.binOpDiv)
+	| "->" => (PT.binOpGet) | "||" => (PT.binOpPad)
+	;
+
+ExpExp
+	: UnExp ("^" UnExp => (PT.binOpPow, #2 UnExp_SPAN, UnExp))*
+		=> (mkLBinExp(FULL_SPAN, UnExp, SR))
+	;
+
+UnExp	: SubscriptExp 
+	| UnOp UnExp
+		=> (markExp (FULL_SPAN, PT.ExpUnary(UnOp, UnExp)))
+	;
+
+UnOp
+	: "#" => (PT.unOpLen) | "@" => (PT.unOpToString) | "-" => (PT.unOpNeg)
+	;
+
+SubscriptExp
+	: AtomicExp ("[" Exp "]")?
+		=> (case SR
+		   of NONE => AtomicExp
+		    | SOME idx => markExp (FULL_SPAN, PT.ExpSubscript(AtomicExp, idx))
+		  (* end case *))
+	;
+
+(*
+ApplyExp
+	: AtomicExp (AtomicExp => (AtomicExp, #2 AtomicExp_SPAN))*
+		=> (let
+		    val leftPos = #1 FULL_SPAN
+		    fun mk (e, []) = e
+		      | mk (e, [(e', rightPos)]) =
+			  markExp ((leftPos, rightPos), PT.ExpApply(e, e'))
+		      | mk (e, (e', pos)::r) =
+			  mk (markExp ((leftPos, pos), PT.ExpApply(e, e')), r)
+		    in
+		      mk (AtomicExp, SR)
+		    end)
+	;
+*)
+
+AtomicExp
+	: Const
+		=> (Const)
+	| SpecialId "(" Exp ")"
+		=> (markExp (FULL_SPAN, PT.ExpApply(SpecialId, Exp)))
+	| ID ( "(" Exp ")" )?
+		=> (case SR
+		     of NONE => markExp (FULL_SPAN, PT.ExpVar ID)
+		      | SOME e => markExp (FULL_SPAN, PT.ExpApply(ID, e))
+		    (* end case *))
+	| OPID "(" Exp ")"
+		=> (markExp (FULL_SPAN, PT.ExpApply(OPID, Exp)))
+        | "__prim" STRINGCONST "(" Exp ")"
+                => (PT.ExpPrimApply(STRINGCONST, Exp))
+	| "__vector" "(" Exp ")"
+		=> (markExp (FULL_SPAN, PT.ExpVector Exp))
+	| "time" "(" Exp ")"
+		=> (markExp (FULL_SPAN, PT.ExpTime Exp))
+	| "{" ApplyBody ("|" Exp)? "}"
+		=> (markExp (FULL_SPAN, ApplyBody SR))
+	| "[" "]" TypeExp
+		=> (markExp (FULL_SPAN, PT.ExpSeqEmpty TypeExp))
+	| "[" Exp SequenceTail "]"
+		=> (markExp (FULL_SPAN, SequenceTail Exp))
+	| "(" Exp ")"
+		=> (PT.ExpParen Exp)
+	;
+
+SpecialId
+	: "any"		=> (a_any)
+	;
+
+ApplyBody
+	: %try Exp ":" RBinds
+		=> (fn optExp => PT.ExpApplyForEach(Exp, RBinds, optExp))
+	| %try RBinds
+		=> (let
+		    val PT.Bind{tree=(pat, _), ...}::_ = RBinds
+		    in
+		      fn optExp => PT.ExpApplyForEach(patToExp pat, RBinds, optExp)
+		    end)
+	;
+
+RBinds
+	: RBind (";" RBind)*
+		=> (RBind :: SR)
+	;
+
+RBind
+	: ID
+		=> (PT.Bind{span = FULL_SPAN, tree = (PT.PatVar ID, PT.ExpVar ID)})
+	| Pattern "in" Exp
+		=> (PT.Bind{span = FULL_SPAN, tree = (Pattern, Exp)})
+	;
+
+SequenceTail
+	: ":" Exp (":" Exp)?
+		=> (fn e => PT.ExpSeqRange(e, Exp, SR))
+	| (* empty *)
+		=> (fn e => PT.ExpSeq(tupleToExps e))
+	;
+
+Const
+	: INTCONST
+		=> (markExp (FULL_SPAN, PT.ExpInt INTCONST))
+	| FLOATCONST
+		=> (markExp (FULL_SPAN, PT.ExpFloat FLOATCONST))
+	| BOOLCONST
+		=> (markExp (FULL_SPAN, PT.ExpBool BOOLCONST))
+	| STRINGCONST
+		=> (markExp (FULL_SPAN, PT.ExpString STRINGCONST))
+	| CHARCONST
+		=> (markExp (FULL_SPAN, PT.ExpChar CHARCONST))
+	;
+
+(******************** Patterns ********************)
+
+Pattern
+	: AtomicPat ("," Pattern)?
+		=> (case SR
+		     of NONE => AtomicPat
+		      | SOME p => markPat (FULL_SPAN, PT.PatPair(AtomicPat, p))
+		    (* end case *))
+	;
+
+AtomicPat
+	: ID ("(" Pattern ")")?
+		=> (case SR
+		     of NONE => markPat (FULL_SPAN, PT.PatVar ID)
+		      | SOME pat => markPat (FULL_SPAN, PT.PatCons(ID, pat))
+		    (* end case *))
+	| "__vector" "(" Pattern ")"
+		=> (markPat (FULL_SPAN, PT.PatVector Pattern))
+	| "_"
+		=> (markPat (FULL_SPAN, PT.PatWild))
+	| "(" Pattern ")"
+		=> (Pattern)
+	;

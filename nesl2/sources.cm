@@ -1,0 +1,146 @@
+(* sources.cm
+ *
+ * COPYRIGHT (c) 2010 The Diderot Project (http://diderot-language.cs.uchicago.edu)
+ * All rights reserved.
+ *)
+
+Library
+
+  structure Main
+
+  structure Test
+
+is
+  $/basis.cm
+  $/smlnj-lib.cm
+  $/ml-lpt-lib.cm
+  $/pp-lib.cm
+
+(* common code *)
+  common/error.sml
+  common/cmd.sml
+  common/log.sml
+  common/options.sml
+  common/phase-timer.sml
+  common/prim-ty-fn.sml
+  common/pure.sml
+  common/stamp.sml
+  common/stats.sml
+  common/timers.sml
+  common/type-base.sml
+
+(* parser and parse-tree representation *)
+  parse/keywords.sml
+  parse/nesl.lex : ml-ulex
+  parse/nesl.grm : ml-antlr
+  parse/parse-tree.sml
+  parse/parser.sml
+  parse/pp-parse-tree.sml
+
+(* typechecker and typed AST representation *)
+  typecheck/ast.sml
+  typecheck/basis-env.sml
+  typecheck/check-prim.sml 
+  typecheck/dataty.sml
+  typecheck/env.sml
+  typecheck/funct.sml
+  typecheck/nesl-basis.sml
+  typecheck/nesl-types.sml
+  typecheck/pp-ast.sml
+  typecheck/ty-var.sml
+  typecheck/typechecker.sml
+  typecheck/unify.sml
+  typecheck/var.sml
+
+(* monomorphizer and MonoAST representation *)
+  mono/check-mono.sml
+  mono/fun-env-rep.sml
+  mono/mono-ast.sml
+  mono/mono-funct.sml
+  mono/mono-prim-ty.sml
+  mono/mono-ty.sml
+  mono/mono-util.sml
+  mono/mono-var.sml
+  mono/monomorphize.sml
+  mono/pp-mono.sml
+
+(* normalized AST *)
+  normal/fun-env.sml
+  normal/normal-ast.sml
+  normal/normal-env.sml
+  normal/normal-ty.sml
+  normal/normal-var.sml
+  normal/normalize.sml
+  normal/pp-normal.sml
+
+(* flattener and flattened representation *)
+  flatten/analyze-shapes.sml		  
+  flatten/arity-raise.sml
+  flatten/census.sml
+  flatten/check-flan.sml	
+  flatten/contract.sml
+  flatten/flan-types.sml
+  flatten/flan.sml
+  flatten/flan-var.sml
+  flatten/flan-funct.sml	
+  flatten/flan-util.sml		
+  flatten/flan-prim-ty.sml	
+  flatten/flan-env.sml	
+  flatten/flatten.sml
+  flatten/inline.sml
+  flatten/pp-flan.sml	
+  flatten/prim.sml
+  flatten/shapes.sml	
+  flatten/transform.sml	
+
+(* fusion *)		
+  fusion/check-fuse.sml	
+  fusion/fuse-ast.sml
+  fusion/fuse-census.sml	
+  fusion/fuse-contract.sml
+  fusion/fuse-env.sml
+  fusion/fuse-funct.sml	
+  fusion/fuse-shapes.sml	
+  fusion/fuse-util.sml
+  fusion/fuse-var.sml
+  fusion/fusion.sml
+  fusion/gen-op.sml	
+  fusion/internal-op.sml
+  fusion/kernel.sml
+  fusion/kernel-exp.sml
+  fusion/pp-fuse.sml	 
+  fusion/reduce-op.sml
+  fusion/scalar-op.sml
+  fusion/scan-op.sml
+  fusion/to-fuse.sml	
+  fusion/vector-op.sml
+
+(* code generation *)
+  codegen/census.sml
+  codegen/clang.sml
+  codegen/convert.sml
+  codegen/cu-lambda.sml
+  codegen/cu-var.sml
+  codegen/gen-cpu.sml
+  codegen/gen-cuda.sml
+  codegen/liveness.sml
+  codegen/pp-cu-lambda.sml
+  codegen/print-as-cuda.sml
+  codegen/task-graph.sml
+  codegen/util.sml
+
+(* generated code fragment files *)
+  codegen/check-error.sml
+  codegen/commands.sml
+  codegen/cpu-types.sml
+  codegen/cuda-names.sml
+  codegen/gen-reduce.sml
+  codegen/header.sml
+  codegen/main-init.sml
+  codegen/pick-dev.sml
+
+(* main program *)
+  main.sml
+
+(* testing infrastructure *)
+  test.sml

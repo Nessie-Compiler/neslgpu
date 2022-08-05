@@ -1,0 +1,8 @@
+
+function sumlogsum(n) = sum({sum({ln(float(j)) : j in [1:i*i]}) : i in [1:n]}) $
+function slsloop(n,k) = if k == 0 then 0.0 else sumlogsum(n) + slsloop(n, k-1) $
+function sls(n, runs) = let z = sumlogsum(n); (x,y) = time(slsloop(n,runs)) in (x / float(runs), y / float(runs) * 1000.0) $
+
+sls(100, 2) $
+
+

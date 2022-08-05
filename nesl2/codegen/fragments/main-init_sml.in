@@ -1,0 +1,9 @@
+  // CUDA device initialization
+    CudaDevice *dev = PickCudaDev (argc, argv);
+    if (dev == 0) {
+	return 1;
+    }
+
+    dev->select();
+    delete dev;
+

@@ -1,0 +1,48 @@
+I. Change types of primitives.
+   Wherever vector primitives took flat vectors they now take regular vectors,
+   and no segment descriptors.
+   Nothing takes segment descriptors or flat vectors.
+   (Except LENGTHS and MAKE_SEGDES, if those still exist.
+   And if they do we should probably only use them in flatten & partition)
+
+   every primitive p has lifted equivalent p^, whose type is just the lifted type of p
+   	 * question: if p takes multiple arguments, do we lift the tuple or the
+	 individual arguments? lifting the tuple was cleaner for functions, but
+	 do we want to unzip inside of primitives?
+
+new primitive types:
+    scalar ops--unchanged	
+    LENGTH: [a] -> int (only for flat vectors)
+    LENGTHS: segdes -> [int] (can't be lifted)
+    MAKE_SEGDES: [int] -> segdes (can't be lifted)
+    scans: [a] -> [a], a is a base type
+    reduces: [a] -> a, a is a base type
+    PERMUTE: ([a], [int]) -> [a]
+    DPERMUTE: ([a], [int], [a]) -> [a]
+    FPERMUTE: ([a], [int], [bool]) -> [a]
+    BPERMUTE: ([a], [int]) -> [a]
+    BFPERMUTE: ([a], [int], [bool]) -> [a]
+    DFPERMUTE: ([a], [int], [bool], [a]) -> [a]	
+    EXTRACT: ([a], int) -> a
+    REPLACE: ([a], int, a) -> [a]
+    PACK: ([a], [bool]) -> [a]
+    RANK_UP: [a] -> [int]  
+    RANK_DOWN: [a] -> [int]
+    DIST: (a, int) -> [a]
+    INDEX: (int, int, int) -> [int]
+    
+
+II. Rewrite basis library functions to use primitives accordingly.
+    The types (and semantics) of any library functions available at the language level 
+    shouldn't change at all.
+
+-This means we should be able to get rid of __vector constructs entirely, *except* maybe in partition and flatten.
+To deal with those, we can either:
+   just make them primitives too, like Keller does, or
+   write custom flatten^ and partition^ functions, and manually set those to be lifted partition and flatten
+
+if we keep partition and flatten as library functions, not primitives, we should also
+keep MAKE_SEGDES and LENGTHS. Otherwise we don't need 'em.
+
+we should also be able to get rid of SCALAR_TO_SEQ and SEQ_TO_SCALAR
+

@@ -1,0 +1,6 @@
+../../bin/linux/release/radixSortThrust Starting...
+
+
+Sorting 1048576 32-bit unsigned int keys and values
+
+radixSort, Throughput = 255.3786 MElements/s, Time = 0.00411 s, Size = 1048576 elements

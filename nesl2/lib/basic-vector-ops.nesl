@@ -1,0 +1,90 @@
+% basic-vector-ops.nesl
+=
+= This file contains the definitions of the basic Nesl operations on vectors. It was generated from
+= "vector-ops.lnesl" in the Nesl distribution and then hand edited to patch various issues.
+%
+
+% scan operations %
+__prim function plus_scan (a) : [alpha] -> [alpha] :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "+_SCAN INT" (a)
+    | float: __prim "+_SCAN FLOAT" (a) $
+__prim function max_scan (a) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "MAX_SCAN INT" (a)
+    | float: __prim "MAX_SCAN FLOAT" (a)
+    | char: __prim "MAX_SCAN CHAR" (a) $
+__prim function min_scan (a) : [alpha] -> [alpha] :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "MIN_SCAN INT" (a)
+    | float: __prim "MIN_SCAN FLOAT" (a)
+    | char: __prim "MIN_SCAN CHAR" (a) $
+__prim function mult_scan (a) : [alpha] -> [alpha] :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "*_SCAN INT" (a)
+    | float: __prim "*_SCAN FLOAT" (a) $
+__prim function or_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "OR_SCAN INT" (a)
+    | bool: __prim "OR_SCAN BOOL" (a) $
+__prim function and_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "AND_SCAN INT" (a)
+    | bool: __prim "AND_SCAN BOOL" (a) $
+__prim function xor_scan (a) : [alpha] -> [alpha] :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "XOR_SCAN INT" (a)
+    | bool: __prim "XOR_SCAN BOOL" (a) $
+
+% reduction operations %
+__prim function sum (v) : [alpha] -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "+_REDUCE INT" (v)
+    | float: __prim "+_REDUCE FLOAT" (v) $
+__prim function product (v) : [alpha] -> alpha :: (alpha in number) =
+  __base_typecase alpha
+    | int: __prim "*_REDUCE INT" (v)
+    | float: __prim "*_REDUCE FLOAT" (v) $
+__prim function max_val (v) : [alpha] -> alpha :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "MAX_REDUCE INT" (v)
+    | float: __prim "MAX_REDUCE FLOAT" (v)
+    | char: __prim "MAX_REDUCE CHAR" (v) $
+__prim function min_val (v) : [alpha] -> alpha :: (alpha in ordinal) =
+  __base_typecase alpha
+    | int: __prim "MIN_REDUCE INT" (v)
+    | float: __prim "MIN_REDUCE FLOAT" (v)
+    | char: __prim "MIN_REDUCE CHAR" (v) $
+__prim function any (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "OR_REDUCE INT" (v)
+    | bool: __prim "OR_REDUCE BOOL" (v) $
+__prim function all (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "AND_REDUCE INT" (v)
+    | bool: __prim "AND_REDUCE BOOL" (v) $
+__prim function parity (v) : [alpha] -> alpha :: (alpha in logical) =
+  __base_typecase alpha
+    | int: __prim "XOR_REDUCE INT" (v)
+    | bool: __prim "XOR_REDUCE BOOL" (v) $
+
+% zip/unzip %
+%
+function zip (a, b) : ([A], [B]) -> [(A, B)] :: (A in any; B in any) =
+  { (a, b) : a; b} $
+function zip3 (a, b, c) : ([A], [B], [C]) -> [(A, (B, C))] :: (A in any; B in any; C in any) =
+  { (a, (b, c)) : a; b; c} $
+function unzip (a) =
+  ({a1 : (a1, _) in a}, {a2 : (_, a2) in a}) $
+%
+% primitive zip is the real workhorse %
+%
+__prim function prim_zip (a, b) : ([A], [B]) -> [(A, B)] :: (A in any; B in any) =
+  __poly_typecase A
+    | let __vector(seg, _) = a; in __vector(seg, (a, b))
+    | let __vector(sega, _) = a;
+	 the segdes of the zipped sequence is going to be [len], where len is the number of subsegments in a
+	  seg = __prim "MAKE_SEGDES" (__prim "LENGTH INT" (__prim "LENGTHS" (sega)))
+      in
+	__vector(seg, (a, b)) $
+%

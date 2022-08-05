@@ -1,0 +1,31 @@
+Missing library functions:
+
+	subseq
+	bottop
+	split
+	rep
+	int_collect
+	first
+	remove_duplicates
+	drop
+	median
+	transpose
+	group_by
+
+Current status of tests:
+
+batcher.nesl		- missing library functions
+bh.nesl			- missing library functions
+black-scholes.nesl	- unbound variable in codegen/convert.sml
+delaunay.nesl		- missing library functions
+dotp.nesl		- OK (generates code)
+fact.nesl		- unbound variable in codegen/convert.sml
+logsum.nesl		- unbound variable in codegen/convert.sml
+mandelbrot.nesl		- unbound variable in codegen/convert.sml
+muladd.nesl		- OK (generates code)
+nbody.nesl		- unbound variable in codegen/convert.sml
+qs.nesl			- undefined function partition<ECA8> in flatten/transform.sml
+quickhull.nesl		- fails with cvtExp: ExpSeqRange (tuple) in flatten/transform.sml
+radix.nesl		- missing library functions
+sumlogsum.nesl		- unbound variable in codegen/convert.sml
+triv.nesl		- OK (generates code)

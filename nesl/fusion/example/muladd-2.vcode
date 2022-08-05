@@ -1,0 +1,45 @@
+{
+computeSign MAIN1_1
+FUNC MAIN1_1 0 -> 2
+function MAIN1_1 ()
+    let t000#2 = (CONST INT 10000000)
+    let t002#2 = (MAKE_SEGDES @ (CONST INT 10000000))
+    let t003#1 = (DIST INT @ (CONST INT 100) t002)
+    let t004#1 = (RAND @ t003)
+    let t006#1 = (MAKE_SEGDES @ t000)
+    let t007#1 = (DIST INT @ (CONST INT 100) t006)
+    let t008#1 = (RAND @ t007)
+    let t010#1 = (MAKE_SEGDES @ t000)
+    let t011#1 = (DIST INT @ (CONST INT 100) t010)
+    let t012#1 = (RAND @ t011)
+    let () = (START_TIMER)
+    let t015#1 = (+ INT @ (* INT @ t004 t008) t012)
+    let u017#1 = (STOP_TIMER)
+    let t019#1 = (EXTRACT INT @ t015 (CONST INT 0) t002)
+    in
+      RET (t019, u017)
+}
+
+FUNC MAIN1_1
+CONST INT 100
+CONST INT 10
+MAKE_SEGDES
+DIST INT
+
+COPY 1 0
+COPY 1 0
+
+RAND
+
+CPOP 1 1
+RAND
+
+CPOP 1 2
+RAND
+
+START_TIMER
+FUSED 0
+STOP_TIMER
+
+POP 1 1
+RET

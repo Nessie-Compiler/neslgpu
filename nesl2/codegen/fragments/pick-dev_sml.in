@@ -1,0 +1,45 @@
+// code to pick the CUDA device
+//
+
+struct CudaDevice {
+    int		_id;
+    struct cudaDeviceProp _prop;
+
+    CudaDevice (int id, struct cudaDeviceProp const &prop) : _id(id), _prop(prop) { }
+
+    void select () { CHECK_ERROR( cudaSetDevice (this->_id) ); }
+
+};
+
+CudaDevice *PickCudaDev (int argc, const char **argv)
+{
+    int devCount, dev;
+    cudaGetDeviceCount (&devCount);
+    struct cudaDeviceProp prop;
+
+  // check for "-d dev" option
+    for (int i = 1;  i < argc;  i++) {
+	if (strcmp(argv[i], "-d") == 0) {
+	    if (i < argc) {
+		char *argp;
+		dev = strtol(argv[i+1], &argp, 10);
+		if ((0 > dev) && (dev >= devCount)) {
+		    std::cerr << "invalid device number" << std::endl;
+		    return 0;
+		}
+		CHECK_ERROR( cudaGetDeviceProperties (&prop, dev) );
+		return new CudaDevice(dev, prop);
+	    }
+	    else {
+		std::cerr << "missing device number for '-d' option" << std::endl;
+		return 0;
+	    }
+	}
+    }
+
+  // for now we just return the first device
+    dev = 0;
+    CHECK_ERROR( cudaGetDeviceProperties (&prop, dev) );
+    return new CudaDevice(dev, prop);
+
+}

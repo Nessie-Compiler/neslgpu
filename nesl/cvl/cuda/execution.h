@@ -1,0 +1,6 @@
+#define THREADS_PER_BLOCK 256
+#define NUM_BLOCKS(n) (((n)+THREADS_PER_BLOCK-1)/THREADS_PER_BLOCK)
+
+#define MAX_WIDTH 65535
+#define DEF_BLOCKS_PER_GRID(n) dim3 blocksPerGrid(min(MAX_WIDTH, max(1, NUM_BLOCKS(n))),max(1,(NUM_BLOCKS(n)+MAX_WIDTH-1)/MAX_WIDTH))
+

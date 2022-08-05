@@ -1,0 +1,46 @@
+% nest-ops.nesl
+=
+= This file was generated from "nest-ops.lnesl" in the Nesl distribution and then
+= hand edited to patch various issues.
+%
+
+%-- Nesl functions from "nest-ops.lnesl" --%
+function split_index (flags) : [bool] -> ([int], [int]) =
+  let not_f = { btoi(not(flg)) : flg in flags};
+      i_down = plus_scan(not_f);
+      sum_down = sum(not_f);
+      i_up = { sum_down + s : s in plus_scan({ btoi(flags) : flags }) };
+      counts = [sum_down, length(flags) - sum_down];
+  in
+    (counts, { select_scalar (flags, i_up, i_down) : flags; i_up; i_down }) $
+%
+function split (v, flags) : ([alpha], [bool]) -> [[alpha]] :: (alpha in any) =
+  let (counts, index) = split_index(flags);
+  in
+    partition(permute(v, index), counts) $
+function bottop (v) : [alpha] -> [[alpha]] :: (alpha in any) =
+  let l = length(v);
+      botlen = rshift(l + 1, 1);
+  in
+    partition(v, vpair(botlen, l - botlen)) $
+function head_rest (values) : [alpha] -> alpha, [alpha] :: (alpha in any) =
+  pair(elt(values, 0), drop(values, 1)) $
+function rest_tail (values) : [alpha] -> [alpha], alpha :: (alpha in any) =
+  let n = length(values) - 1;
+  in
+    pair(take(values, n), elt(values, n)) $
+function transpose (a) =
+  if length(a) = 0
+    then a
+    else let columns = length(a);
+        rows = min_val({length(a) : a});
+        index = flatten(
+	{
+            base_iseq(ind, columns, rows)
+          :
+          ind in iseq1(0, columns)});
+        data = permute_nocheck(flatten(a), index);
+    in
+      partition(data, dist(columns, rows)) $
+%
+%-- end "nest-ops.lnesl" --%

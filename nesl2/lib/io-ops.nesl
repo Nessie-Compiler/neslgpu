@@ -1,0 +1,25 @@
+% vector-ops.nesl
+=
+= This file was derived from "vector-ops.lnesl" in the Nesl distribution.
+=
+%
+
+function prim_print_char (a) : [char] -> ([char], bool) =
+  __prim "WRITE CHAR" (a) $
+
+% Prints a character to standard output. %
+function print_char (c) : char -> bool =
+  let seg = make_segdes(1);
+      charseq = __vector(seg, __prim "SCALAR_TO_SEQ CHAR" (c));
+      temp = prim_print_char (charseq);
+  in
+    t $
+
+% Prints a character string to standard output. %
+function print_string (s) : string -> bool =
+  let temp = prim_print_char (s);
+  in
+    t $
+
+function print_line (str) =
+  print_string (snoc (str, newline)) $
