@@ -1,18 +1,18 @@
 This source tree contains a port of NESL to run on NVIDIA GPUs using CUDA.
 
-= Building NESL
+## Building NESL
 
 Instructions for building NESL are in the nesl subdirectory.
 
-= Benchmarks
+## Benchmarks
 There are three sets of benchmarks available in this repository.
 
-- Copperhead
+### Copperhead
 
 After installing Copperhead, these can be run directly by simply running "python
 filename.py."
 
-- NESL
+### NESL
 
 Each of these benchmarks is based on a .nesl program. Rather than run them from
 the interpreter, though, we have provided the .vcode, .ucode, and .fcode files,
@@ -27,7 +27,7 @@ shared library (.so) files, so long as the NVIDIA CUDA SDK is installed. Once
 built, you can then run the interpreter on the .fcode file, providing the
 corresponding .so file as an argument to the -l flag.
 
-- CUDA
+### CUDA
 
 These benchmarks require the NVIDIA CUDA SDK. They can each be built using the
 Makefiles provided and run using the generated binaries.
